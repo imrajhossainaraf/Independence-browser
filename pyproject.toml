@@ -12,6 +12,8 @@ license = { text = "Proprietary" }
 # Runtime dependencies are added step by step, each with an ADR in docs/DECISIONS.md.
 dependencies = [
     "httpx>=0.28.1",
+    "pydantic>=2.14.2",
+    "pydantic-settings>=2.16.2",
 ]
 
 [project.scripts]
