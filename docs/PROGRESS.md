@@ -7,7 +7,7 @@ Release A (v0.1.0). Steps 19, 20, 28 are Release B and skipped.
 | 0 | Preflight | done | step-00 | approved by human |
 | 1 | Skeleton, tooling, guardrails | done | step-01 | check green (24 tests, 92% cov); Docker check and runtime build pass |
 | S1 | Spike: pinned-IP TLS | done (GO) | spike-s1 | 8 tests; keep-alive hazard found, fix in Step 5 (ADR-006) |
-| 2 | Config, logging, reporting | todo | | |
+| 2 | Config, logging, reporting | done | step-02 | 86 tests, 98% cov; ceilings, redaction, report tests pass |
 | 3 | URL normalization and safety | todo | | |
 | 4 | SQLite schema and storage | todo | | |
 | 5 | Network safety, fixture server | todo | | |

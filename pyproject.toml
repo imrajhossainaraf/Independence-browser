@@ -47,8 +47,8 @@ src = ["src", "tests", "scripts"]
 select = ["E", "F", "I", "B", "UP", "S", "PT"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101", "S104"]
-"spikes/**" = ["S101", "S104"]
+"tests/**" = ["S101", "S104", "PT018"]
+"spikes/**" = ["S101", "S104", "PT018"]
 "scripts/run_check.py" = ["S603"]
 
 [tool.mypy]

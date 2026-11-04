@@ -15,6 +15,15 @@ function Assert-Uv {
 
 function Invoke-Native {
     param([string]$Command, [string[]]$Arguments)
-    & $Command @Arguments
-    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    # Native tools (uv) write progress to stderr; Windows PowerShell 5.1 turns that into
+    # terminating errors under 'Stop'. The exit code is the source of truth.
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        & $Command @Arguments
+        $code = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $previous
+    }
+    if ($code -ne 0) { exit $code }
 }

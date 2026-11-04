@@ -54,7 +54,9 @@ def test_sensitive_keys_are_redacted(key: str) -> None:
 
 
 def test_nested_structures_are_redacted() -> None:
-    value = redact_value("headers", {"Authorization": "Bearer abc", "ok": "yes", "list": [{"cookie": "c"}]})
+    value = redact_value(
+        "headers", {"Authorization": "Bearer abc", "ok": "yes", "list": [{"cookie": "c"}]}
+    )
     assert value["Authorization"] == REDACTED
     assert value["ok"] == "yes"
     assert value["list"][0]["cookie"] == REDACTED
@@ -82,7 +84,10 @@ def test_log_record_message_and_extras_never_leak() -> None:
 
 def test_raw_query_text_hidden_by_default_and_opt_in() -> None:
     assert emit("search", query="my private words")["query"] == REDACTED
-    assert emit("search", log_raw_queries=True, query="my private words")["query"] == "my private words"
+    assert (
+        emit("search", log_raw_queries=True, query="my private words")["query"]
+        == "my private words"
+    )
 
 
 def test_exception_logs_type_and_scrubbed_message() -> None:

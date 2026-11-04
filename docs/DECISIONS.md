@@ -22,3 +22,6 @@ Context: rule S3 needs connections pinned to a validated IP while the certificat
 
 ## ADR-007, 2026-11-04, accepted: dependencies httpx and trustme
 httpx (BSD-3-Clause) is the only HTTP client and is imported only from `search_engine/net`; trustme (MIT or Apache-2.0) is dev-only for local TLS fixtures. Both are on the BUILD_PLAN Section 4 list.
+
+## ADR-008, 2026-11-04, accepted: configuration limits beyond the plan
+Context: Step 2 needs values for total storage, runtime, timeouts, backoff, and synopsis thresholds that BUILD_PLAN does not state. Decision: defaults of 1 GiB storage (ceiling 2 GiB), 3600 s runtime (ceiling 6 h), connect 10 s, read 20 s, DNS 5 s, retries 3, backoff 2 s to 60 s, synopsis 40 to 300 characters with placeholder coverage 0.6, all adjustable downward and tuned only on dev queries (Step 27). A draft rule 'max_pages_per_host must not exceed max_pages' was dropped (not in the plan, and it made lowering max_pages awkward); its test was removed with it. Feature flags for Release B and news_images_enabled are rejected until their steps exist. Consequences: the human may revise these numbers with a recorded reason.

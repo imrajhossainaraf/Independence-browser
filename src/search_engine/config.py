@@ -210,8 +210,6 @@ class Settings(BaseSettings):
             raise ValueError("synopsis_min_chars must not exceed synopsis_max_chars")
         if self.backoff_base_seconds > self.backoff_max_seconds:
             raise ValueError("backoff_base_seconds must not exceed backoff_max_seconds")
-        if self.max_pages_per_host > self.max_pages:
-            raise ValueError("max_pages_per_host must not exceed max_pages")
         return self
 
     @property

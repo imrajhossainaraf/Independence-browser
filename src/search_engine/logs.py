@@ -48,14 +48,21 @@ _SENSITIVE_KEYS = frozenset(
 _QUERY_KEYS = frozenset({"query", "q", "raw_query", "search_query"})
 
 _TEXT_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
-    (re.compile(r"(?i)\b(cookie|set-cookie|authorization|proxy-authorization|x-api-key)\b\s*[:=]\s*[^\r\n]+"), r"\1: " + REDACTED),
+    (
+        re.compile(
+            r"(?i)\b(cookie|set-cookie|authorization|proxy-authorization|x-api-key)\b\s*[:=]\s*[^\r\n]+"
+        ),
+        r"\1: " + REDACTED,
+    ),
     (re.compile(r"(?i)\bbearer\s+[A-Za-z0-9._~+/=-]+"), "Bearer " + REDACTED),
     (re.compile(r"\bse_[A-Za-z0-9_-]{16,}"), REDACTED),
 )
 
-_STANDARD_ATTRS = frozenset(
-    vars(logging.LogRecord("x", 0, "x", 0, "x", None, None))
-) | {"message", "asctime", "taskName"}
+_STANDARD_ATTRS = frozenset(vars(logging.LogRecord("x", 0, "x", 0, "x", None, None))) | {
+    "message",
+    "asctime",
+    "taskName",
+}
 
 
 def redact_text(text: str) -> str:

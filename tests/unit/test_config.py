@@ -102,7 +102,9 @@ def test_real_network_and_loopback_are_mutually_exclusive(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     with pytest.raises(ConfigError, match="cannot both be true"):
-        load_settings(overrides={"real_network_enabled": "true", "allow_loopback_for_tests": "true"})
+        load_settings(
+            overrides={"real_network_enabled": "true", "allow_loopback_for_tests": "true"}
+        )
     monkeypatch.setenv("SEARCH_ENGINE_REAL_NETWORK_ENABLED", "true")
     monkeypatch.setenv("SEARCH_ENGINE_ALLOW_LOOPBACK_FOR_TESTS", "true")
     with pytest.raises(ConfigError, match="cannot both be true"):
@@ -153,7 +155,12 @@ def test_invalid_values_fail_clearly(key: str, value: str) -> None:
 
 
 def test_unreleased_feature_flags_are_rejected() -> None:
-    for flag in ("feature_images", "feature_entities", "feature_autocomplete", "feature_remote_test"):
+    for flag in (
+        "feature_images",
+        "feature_entities",
+        "feature_autocomplete",
+        "feature_remote_test",
+    ):
         with pytest.raises(ConfigError, match=flag):
             load_settings(overrides={flag: "true"})
     with pytest.raises(ConfigError, match="news_images_enabled"):
@@ -163,8 +170,6 @@ def test_unreleased_feature_flags_are_rejected() -> None:
 def test_cross_field_rules() -> None:
     with pytest.raises(ConfigError, match="synopsis_min_chars"):
         load_settings(overrides={"synopsis_min_chars": "400"})
-    with pytest.raises(ConfigError, match="max_pages_per_host"):
-        load_settings(overrides={"max_pages": "50"})
     with pytest.raises(ConfigError, match="backoff_base_seconds"):
         load_settings(overrides={"backoff_base_seconds": "100", "backoff_max_seconds": "10"})
 
@@ -191,7 +196,9 @@ def test_config_show_cli_marks_sources_and_hides_secrets(
     capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("SEARCH_ENGINE_MAX_PAGES", "77")
-    code = cli.main(["--set", "api_key_hash=topsecretvalue", "--set", "max_depth=1", "config", "show"])
+    code = cli.main(
+        ["--set", "api_key_hash=topsecretvalue", "--set", "max_depth=1", "config", "show"]
+    )
     out = capsys.readouterr().out
     assert code == 0
     assert "topsecretvalue" not in out
