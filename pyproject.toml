@@ -10,7 +10,9 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "Proprietary" }
 # Runtime dependencies are added step by step, each with an ADR in docs/DECISIONS.md.
-dependencies = []
+dependencies = [
+    "httpx>=0.28.1",
+]
 
 [project.scripts]
 search-engine = "search_engine.cli:main"
@@ -27,6 +29,7 @@ dev = [
     "bandit>=1.8",
     "pip-audit>=2.7",
     "pip-licenses>=5.0",
+    "trustme>=1.2.1",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -43,6 +46,7 @@ select = ["E", "F", "I", "B", "UP", "S", "PT"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S104"]
+"spikes/**" = ["S101", "S104"]
 "scripts/run_check.py" = ["S603"]
 
 [tool.mypy]
@@ -54,7 +58,7 @@ explicit_package_bases = true
 
 [tool.pytest.ini_options]
 minversion = "8.0"
-testpaths = ["tests"]
+testpaths = ["tests", "spikes"]
 addopts = "-ra --strict-markers --disable-socket --allow-unix-socket"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
