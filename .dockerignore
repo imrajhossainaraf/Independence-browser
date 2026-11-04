@@ -1,0 +1,13 @@
+.git
+.venv
+__pycache__
+*.pyc
+.mypy_cache
+.ruff_cache
+.pytest_cache
+.coverage
+data/raw
+data/index
+data/*.db*
+data/preflight.approved.json
+.env

@@ -1,0 +1,72 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "search-engine"
+version = "0.1.0.dev0"
+description = "Independent, self-hosted search engine for one Windows laptop (server-first, read-only API)."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Proprietary" }
+# Runtime dependencies are added step by step, each with an ADR in docs/DECISIONS.md.
+dependencies = []
+
+[project.scripts]
+search-engine = "search_engine.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "pytest-socket>=0.7",
+    "hypothesis>=6.115",
+    "coverage>=7.6",
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "bandit>=1.8",
+    "pip-audit>=2.7",
+    "pip-licenses>=5.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/search_engine"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests", "scripts"]
+
+[tool.ruff.lint]
+# E/F pyflakes+pycodestyle, I imports, B bugbear, UP pyupgrade, S security, PT pytest style
+select = ["E", "F", "I", "B", "UP", "S", "PT"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S104"]
+"scripts/run_check.py" = ["S603"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+mypy_path = "src"
+files = ["src", "tests", "scripts"]
+explicit_package_bases = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --disable-socket --allow-unix-socket"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "loopback: test may connect to 127.0.0.1 or ::1 only (fixture servers)",
+    "slow: slow test, listed in the step report",
+]
+
+[tool.coverage.run]
+source = ["search_engine"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true

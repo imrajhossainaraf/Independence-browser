@@ -1,0 +1,18 @@
+.venv/
+__pycache__/
+*.pyc
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+*.egg-info/
+.env
+
+# Runtime data is never committed, except seed files the human edits.
+data/*
+!data/.gitkeep
+!data/seeds.txt
+!data/news_sources.txt
+!data/synonyms.txt
