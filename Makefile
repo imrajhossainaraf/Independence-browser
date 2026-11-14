@@ -11,7 +11,7 @@ test:
 	uv run --frozen pytest
 
 demo:
-	uv run --frozen search-engine health
+	uv run --frozen search-engine demo
 
 serve:
 	@echo "serve: the API server is introduced in Step 22 and is not available yet."

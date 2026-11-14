@@ -146,6 +146,24 @@ Decision:
 - Verification: 15 unit tests in `tests/unit/test_fts_index.py` covering term retrieval, title vs body BM25 weighting, upsert text replacement, removal, deactivation, status rules (`noindex`, `metadata_only`, `unsupported`), multilingual indexing (French accents, German umlauts, Chinese CJK, Thai, Arabic), rebuild reproducibility from snapshot, fts5vocab population, and detection of deliberate index corruption. 419 project tests passed with 88% overall coverage.
 Consequences: Query processing and CLI search (Step 11) can directly search the inverted index.
 
+## ADR-020: Query processing, BM25 SearchService, and offline CLI demo (Step 11)
+
+Context: Step 11 requires a thin vertical slice enabling offline end-to-end searching of the document corpus from the command line prior to crawler construction, conforming to Decision D5.
+Decision:
+- Implemented `src/search_engine/search/`:
+  - `query.py`: Query normalization (NFKC, casefolding, control character stripping, whitespace collapsing), capping at 256 characters and 32 terms; phrase extraction with safe double-quote wrapping; stopword filtering for OR fallback (`DEFAULT_STOPWORDS`); CJK character detection; safe FTS5 MATCH expression builder.
+  - `service.py`: `SearchService` executing BM25 retrieval over `doc_fts` (AND matching, falling back to OR with stopword removal when AND results < 5) and `doc_fts_tri` (for CJK queries). Returns `SearchResponse` with metadata (`title`, `url`, `score`, `doc_type`, `lang`, `description`, `word_count`, `published_at`) and reports `match_mode` (`and`, `or`, `trigram`, `empty`). Supports filtering by `doc_type` and `lang`.
+- Added CLI commands in `src/search_engine/cli.py`:
+  - `search-engine search "<query>"` with `--limit`, `--type`, `--lang`, `--json`, and `--db`.
+  - `search-engine demo` executing an end-to-end offline pipeline: ingests the 20 checked-in HTML fixtures, builds the FTS5 index, and runs sample search queries.
+- Updated `scripts/demo.ps1` and `Makefile` (`demo:` target) to execute `search-engine demo`.
+- Verification:
+  - 22 unit tests across `test_query.py`, `test_search_service.py`, and `test_cli_search.py`.
+  - Hypothesis property fuzz testing with 100 random Unicode inputs proving that user input can never trigger an SQLite FTS5 MATCH syntax error.
+  - 441 total project tests passed with 89% coverage and sockets blocked.
+Consequences: Evaluation harness (Step 12) can measure search quality (P@5, P@10, MRR, nDCG@10) against graded queries.
+
+
 
 
 

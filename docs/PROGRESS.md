@@ -19,7 +19,7 @@ Release A (v0.1.0). Steps 19, 20, 28 are Release B and skipped.
 | 9 | Adapters | done | step-09 | 400 tests, 89% coverage; plain text, PDF isolated worker, RSS/Atom, sitemaps (ADR-017) |
 | S2 | Spike: FTS5 tokenizer bake-off | done (GO) | spike-s2 | 30 docs, 15 queries; porter unicode61 + trigram confirmed, WAL p95 0.68ms (ADR-018) |
 | 10 | FTS5 index | done | step-10 | 419 tests, 88% coverage; doc_fts + doc_fts_tri, bm25 weighting, rebuild, consistency (ADR-019) |
-| 11 | Query processing, CLI search | todo | | |
+| 11 | Query processing, CLI search | done | step-11 | 441 tests, 89% cov; D5 safe quoting, AND/OR fallback, SearchService, demo.ps1 (ADR-020) |
 | 12 | Evaluation harness | todo | | |
 | 13 | Ranking and suggestions | todo | | |
 | 14 | Snippets (M1) | todo | | |

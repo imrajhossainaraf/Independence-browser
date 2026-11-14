@@ -12,7 +12,9 @@ from typing import Any
 
 from search_engine import __version__
 from search_engine.config import describe, field_sources, load_settings
+from search_engine.db import Database
 from search_engine.errors import ConfigError
+from search_engine.search import SearchService
 
 
 def health() -> dict[str, str]:
@@ -41,6 +43,25 @@ def build_parser() -> argparse.ArgumentParser:
     config_sub = config.add_subparsers(dest="config_command", required=True)
     show = config_sub.add_parser("show", help="print effective values and where they came from")
     show.add_argument("--json", action="store_true", help="machine-readable output")
+
+    search_parser = subparsers.add_parser("search", help="search the document index offline")
+    search_parser.add_argument("query", help="search terms or quoted phrase")
+    search_parser.add_argument("--limit", type=int, default=10, help="max results to return")
+    search_parser.add_argument(
+        "--type",
+        dest="doc_type",
+        choices=["page", "pdf", "text", "news"],
+        default=None,
+        help="filter by document type",
+    )
+    search_parser.add_argument("--lang", default=None, help="filter by language code")
+    search_parser.add_argument("--json", action="store_true", help="machine-readable JSON output")
+    search_parser.add_argument("--db", type=Path, default=None, help="database path")
+
+    demo_parser = subparsers.add_parser("demo", help="run offline vertical slice demo")
+    demo_parser.add_argument(
+        "--db", type=Path, default=None, help="database path (default: data/demo.db)"
+    )
     return parser
 
 
@@ -67,6 +88,59 @@ def _config_show(args: argparse.Namespace) -> int:
     return 0
 
 
+def _search(args: argparse.Namespace) -> int:
+    overrides = _parse_overrides(args.overrides)
+    settings = load_settings(args.config_file, overrides)
+    db_path = args.db or settings.db_path
+    if not db_path.exists():
+        if args.json:
+            print(
+                json.dumps(
+                    {"error": "database_not_found", "message": f"database not found at {db_path}"}
+                )
+            )
+        else:
+            print(f"error: database not found at {db_path}", file=sys.stderr)
+        return 1
+
+    with Database(db_path) as db, db.reader() as conn:
+        service = SearchService(conn)
+        response = service.search(
+            args.query,
+            limit=args.limit,
+            doc_type=args.doc_type,
+            lang=args.lang,
+        )
+
+    if args.json:
+        print(json.dumps(response.to_dict(), indent=2))
+        return 0
+
+    print(
+        f"Search results for: {response.normalized_query!r} "
+        f"(mode: {response.match_mode}, found: {len(response.results)})"
+    )
+    if not response.results:
+        print("No matching documents found.")
+        return 0
+
+    print("-" * 70)
+    for i, r in enumerate(response.results, 1):
+        print(f"[{i}] {r.title}")
+        print(f"    URL:   {r.url}")
+        print(f"    Type:  {r.doc_type} | Lang: {r.lang} | Score: {r.score:.3f}")
+        if r.description:
+            print(f"    Desc:  {r.description}")
+        print()
+    return 0
+
+
+def _demo(args: argparse.Namespace) -> int:
+    from search_engine.demo import run_demo
+
+    return run_demo(args.db)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
@@ -75,6 +149,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         if args.command == "config" and args.config_command == "show":
             return _config_show(args)
+        if args.command == "search":
+            return _search(args)
+        if args.command == "demo":
+            return _demo(args)
     except ConfigError as exc:
         print(f"error [{exc.code}]: {exc.message}", file=sys.stderr)
         return 3
