@@ -53,4 +53,13 @@ Payloads are checked against Content-Type allowlists and scanned via magic-byte 
 Status codes are classified into `success`, `retryable` (408, 425, 429, 5xx, network drops, timeouts), and `permanent` (4xx). Rate limits (429) extract `Retry-After` capped at `max_crawl_delay_seconds`.
 No cookies are sent or stored (invariant I-7).
 
+## ADR-013: Robots policy and host scheduler (Step 7)
+
+`Protego` (BSD-3-Clause, pure Python) was added as the RFC 9309 robots parser behind the project-owned `RobotsPolicy` interface.
+`RobotsCache` caches policies per origin (`<scheme>://<host>:<port>`) in memory and SQLite with D3 TTLs: 24 hours for parsed (2xx) and allow_all (4xx), and 10 minutes for disallow_all (5xx, timeouts, refused redirect hops).
+`Scheduler.approve(url)` enforces strict gate ordering before issuing a `FetchApproval`: (1) normalization, (2) blocklist/allowlist, (3) DNS and public IP policy, (4) robots rules and Crawl-delay cap, (5) per-host politeness next-allowed time, and (6) per-host concurrency (1) and global concurrency caps.
+`Scheduler.approve_robots(origin)` issues a single-use `RobotsFetchApproval` bound to the host's own `/robots.txt`, skipping only the robots rule check. Up to 5 redirect hops are supported, provided each target stays on an allowlisted host.
+Politeness delays and exponential backoff with jitter on retryable failures are tracked and updated via `Scheduler.release()`.
+
+
 

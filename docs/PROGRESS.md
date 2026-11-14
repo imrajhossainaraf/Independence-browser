@@ -12,7 +12,7 @@ Release A (v0.1.0). Steps 19, 20, 28 are Release B and skipped.
 | 4 | SQLite schema and storage | done | step-04 | 295 tests, 97% coverage |
 | 5 | Network safety, fixture server | done | step-05 | 320 tests, 97% coverage; resolver, transport, IP gate, fixture server |
 | 6 | SafeFetcher | done | step-06 | 347 tests, 97% coverage; single choke point, approvals, streaming caps, magic-byte sniffing |
-| 7 | Robots and scheduler | todo | | |
+| 7 | Robots and scheduler | done | step-07 | 360 tests, 96% coverage; Protego adapter, robots cache, Scheduler.approve, concurrency & politeness |
 | 8 | HTML extraction | todo | | |
 | 9 | Adapters | todo | | |
 | 10 | FTS5 index | todo | | |
