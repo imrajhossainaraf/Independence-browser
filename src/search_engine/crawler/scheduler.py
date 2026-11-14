@@ -199,6 +199,8 @@ class Scheduler:
         max_bytes: int = 2 * 1024 * 1024,
         kind: str = "page",
         expected_content_types: tuple[str, ...] | None = None,
+        etag: str | None = None,
+        last_modified: str | None = None,
     ) -> FetchApproval | Denial:
         """Evaluate a URL and issue a FetchApproval if all safety, robots, and host rules pass."""
         # 1. Normalize URL
@@ -255,6 +257,8 @@ class Scheduler:
             max_bytes=max_bytes,
             expected_content_types=expected_content_types,
             kind=kind,
+            etag=etag,
+            last_modified=last_modified,
         )
 
     def release(

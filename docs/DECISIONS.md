@@ -291,6 +291,49 @@ Decision:
   - 499 total project tests passing with 88% overall test coverage and sockets blocked.
 Consequences: A local site crawls end to end and the report explains every URL. Step 17 can now implement deduplication, canonical grouping, and freshness updates.
 
+## ADR-026: Deduplication, Updates, and Freshness (Step 17)
+
+Context: Step 17 implements deduplication, updates, and freshness policies so repeated crawling keeps the collection clean without duplicating index entries or visible search results. Requirements: exact duplicates by content hash; canonical grouping (rel=canonical honored only for same registered domain and safe targets, cross-domain ignored); redirect consolidation (deactivates superseded documents); trailing-slash and index-file variants grouped through canonical grouping; recrawl policy (stale after configurable days) with ETag and Last-Modified conditional requests (304 Not Modified); maintained fetched_at, updated_at, last_modified_header; 404 and 410 deactivating documents; unchanged content only refreshing timestamps; changed content updating the document and index; running verify_index_consistency() after every scenario.
+
+Decision:
+- Implemented `src/search_engine/crawler/dedup.py`:
+  - `canonical_group_key`: Deterministically maps URLs to canonical grouping keys by stripping protocol, default ports (80, 443), trailing slashes (except root), and common index-file suffixes (`/index.html`, `/index.htm`, `/index.php`, `/index.asp`, `/default.html`, `/default.htm`). When `content_hash` is present, formats as `hash:<content_hash>`.
+  - `is_valid_canonical`: Validates that `rel=canonical` targets are safe and share the exact same registered domain as the final URL (decision D12). Rejects cross-domain targets, private IPs, and invalid URLs.
+  - `resolve_canonical_group`: Checks SQLite database for existing matching documents by exact content hash, valid same-domain canonical URL, or trailing-slash/index-file variants. Returns the existing `canonical_group_id` (or document id) to link duplicates into the same group.
+  - `consolidate_redirect`: When a crawled URL returns a redirect, any previously indexed document for that hopped URL is deactivated via `deactivate_document(conn, doc_id, reason="redirected")`, preventing ghost results.
+- Implemented `src/search_engine/crawler/freshness.py`:
+  - `is_stale`: Determines if a document's `fetched_at` timestamp exceeds `recrawl_after_days` (default 7 days).
+  - `enqueue_stale_urls`: Re-enqueues active documents older than the stale threshold whose URLs are in `done` status back into `pending` with `retry_count = 0`.
+  - `get_document_conditional_headers`: Retrieves stored `etag` and `last_modified_header` for conditional HTTP requests.
+- Updated `src/search_engine/extract/html.py`:
+  - `_extract_canonical_url`: Validates `norm.registered_domain == final_norm.registered_domain`. If cross-domain, appends `"cross_domain_canonical_ignored"` to warnings and returns `None`, ignoring the external target.
+- Enhanced HTTP Conditional Fetching:
+  - `FetchApproval` and `issue_fetch_approval` carry optional `etag` and `last_modified`.
+  - `Scheduler.approve` accepts `etag` and `last_modified` from existing document records.
+  - `SafeFetcher.fetch_once` attaches `If-None-Match` and `If-Modified-Since` headers.
+  - Handles HTTP 304 Not Modified responses by returning `FetchResult(..., status_code=304, outcome="not_modified", ...)`.
+- Updated `src/search_engine/repositories.py` (`DocumentRepository`):
+  - `upsert_document` supports `canonical_group_id`, `etag`, `last_modified_header`, and `content_type` with COALESCE conflict resolution. Automatically initializes `canonical_group_id = doc_id` for group representatives.
+  - `touch_document`: Refreshes `fetched_at`, `updated_at`, `etag`, and `last_modified_header` for 304 and unchanged 200 responses without modifying body text or virtual index tables.
+  - `get_by_url_id`: Retrieves document rows by URL ID.
+- Updated `src/search_engine/crawler/pipeline.py`:
+  - Inspects existing document records before fetch to attach conditional headers.
+  - Handles 304 Not Modified: touches document timestamps and headers without re-indexing.
+  - Handles 404 / 410 Gone: calls `deactivate_document(conn, doc_id, reason="http_<status>")` to remove deleted pages from `doc_fts` and `doc_fts_tri`.
+  - Handles unchanged 200 responses: checks if `content_hash` matches existing active document; calls `touch_document` and bypasses FTS re-indexing.
+  - Handles changed 200 responses: resolves canonical grouping, validates `rel=canonical`, upserts document, and calls `upsert_document_index`.
+  - Deactivates previous documents on redirected hops.
+- Updated `src/search_engine/search/grouping.py` and `service.py`:
+  - `GroupedDocument` carries `canonical_group_id`.
+  - `normalize_group_key` prioritizes `canonical_group_id` and strips index-file suffixes.
+  - Search candidates query `d.canonical_group_id` and collapse duplicates into single representative search results.
+- Verification:
+  - 9 unit and integration tests in `tests/unit/test_dedup_freshness.py` verifying exact duplicate content hash grouping, same-domain canonical grouping, cross-domain canonical rejection, trailing-slash and index-file grouping, redirect consolidation, 304 conditional request handling, changed content index updates, 404/410 deactivation, and proof that repeated crawls never create duplicate FTS rows or visible duplicate results.
+  - `verify_index_consistency()` verified after every test scenario.
+  - 508 total project tests passing with 87% overall coverage and all sockets blocked.
+
+Consequences: The search engine maintains a clean, deduplicated index across repeated crawls and updates. Step 18 can now implement news ingestion and headline clustering.
+
 
 
 

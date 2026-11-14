@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 from datetime import UTC, datetime
+from typing import cast
 
 
 def _now() -> str:
@@ -100,6 +101,8 @@ class DocumentRepository:
         doc_type: str = "page",
         final_url: str | None = None,
         canonical_url: str | None = None,
+        canonical_group_id: int | None = None,
+        content_type: str | None = None,
         title: str = "",
         headings: str = "",
         description: str = "",
@@ -109,6 +112,8 @@ class DocumentRepository:
         word_count: int = 0,
         content_hash: str | None = None,
         raw_hash: str | None = None,
+        etag: str | None = None,
+        last_modified_header: str | None = None,
         published_at: str | None = None,
         fetched_at: str | None = None,
     ) -> int:
@@ -119,23 +124,34 @@ class DocumentRepository:
 
         stamp = fetched_at or _now()
         cols = (
-            "doc_type, final_url, canonical_url, title, headings, description, "
-            "text_gz, lang, status, word_count, content_hash, raw_hash, "
-            "published_at, fetched_at, updated_at"
+            "doc_type, final_url, canonical_url, canonical_group_id, content_type, "
+            "title, headings, description, text_gz, lang, status, word_count, "
+            "content_hash, raw_hash, etag, last_modified_header, published_at, "
+            "fetched_at, updated_at"
         )
         update_clause = (
             "doc_type = excluded.doc_type, final_url = excluded.final_url, "
-            "canonical_url = excluded.canonical_url, title = excluded.title, "
-            "headings = excluded.headings, description = excluded.description, "
+            "canonical_url = excluded.canonical_url, "
+            "canonical_group_id = COALESCE(excluded.canonical_group_id, "
+            "documents.canonical_group_id), "
+            "content_type = COALESCE(excluded.content_type, documents.content_type), "
+            "title = excluded.title, headings = excluded.headings, "
+            "description = excluded.description, "
             "text_gz = excluded.text_gz, lang = excluded.lang, status = excluded.status, "
             "word_count = excluded.word_count, content_hash = excluded.content_hash, "
-            "raw_hash = excluded.raw_hash, published_at = excluded.published_at, "
+            "raw_hash = excluded.raw_hash, "
+            "etag = COALESCE(excluded.etag, documents.etag), "
+            "last_modified_header = COALESCE(excluded.last_modified_header, "
+            "documents.last_modified_header), "
+            "published_at = excluded.published_at, "
             "fetched_at = excluded.fetched_at, updated_at = excluded.updated_at"
         )
         values = (
             doc_type,
             final_url,
             canonical_url,
+            canonical_group_id,
+            content_type,
             title,
             headings,
             description,
@@ -145,30 +161,70 @@ class DocumentRepository:
             word_count,
             content_hash,
             raw_hash,
+            etag,
+            last_modified_header,
             published_at,
             stamp,
             stamp,
         )
 
+        placeholders = ", ".join(["?"] * (len(values) + 1))
+
         if url_id is not None:
             sql = (
                 f"INSERT INTO documents (url_id, {cols}) "  # noqa: S608
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                f"VALUES ({placeholders}) "
                 f"ON CONFLICT (url_id) DO UPDATE SET {update_clause}"
             )
             self._conn.execute(sql, (url_id, *values))
             row = self._conn.execute(
-                "SELECT id FROM documents WHERE url_id = ?", (url_id,)
+                "SELECT id, canonical_group_id FROM documents WHERE url_id = ?", (url_id,)
             ).fetchone()
-            return int(row[0])
+            doc_id = int(row[0])
+            if row[1] is None:
+                self._conn.execute(
+                    "UPDATE documents SET canonical_group_id = ? WHERE id = ?",
+                    (doc_id, doc_id),
+                )
+            return doc_id
         else:
             sql = (
                 f"INSERT INTO documents (news_item_id, {cols}) "  # noqa: S608
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                f"VALUES ({placeholders}) "
                 f"ON CONFLICT (news_item_id) DO UPDATE SET {update_clause}"
             )
             self._conn.execute(sql, (news_item_id, *values))
             row = self._conn.execute(
-                "SELECT id FROM documents WHERE news_item_id = ?", (news_item_id,)
+                "SELECT id, canonical_group_id FROM documents WHERE news_item_id = ?",
+                (news_item_id,),
             ).fetchone()
-            return int(row[0])
+            doc_id = int(row[0])
+            if row[1] is None:
+                self._conn.execute(
+                    "UPDATE documents SET canonical_group_id = ? WHERE id = ?",
+                    (doc_id, doc_id),
+                )
+            return doc_id
+
+    def touch_document(
+        self,
+        doc_id: int,
+        *,
+        fetched_at: str,
+        updated_at: str,
+        etag: str | None = None,
+        last_modified: str | None = None,
+    ) -> None:
+        """Refresh fetch timestamps and conditional headers without changing content."""
+        self._conn.execute(
+            "UPDATE documents SET fetched_at = ?, updated_at = ?, "
+            "etag = COALESCE(?, etag), "
+            "last_modified_header = COALESCE(?, last_modified_header) "
+            "WHERE id = ?",
+            (fetched_at, updated_at, etag, last_modified, doc_id),
+        )
+
+    def get_by_url_id(self, url_id: int) -> sqlite3.Row | None:
+        """Fetch a document row by url_id."""
+        row = self._conn.execute("SELECT * FROM documents WHERE url_id = ?", (url_id,)).fetchone()
+        return cast(sqlite3.Row | None, row)

@@ -139,10 +139,19 @@ def _extract_canonical_url(
     resolved = urllib.parse.urljoin(final_url, raw_href)
     try:
         norm = normalize(resolved, allow_loopback=allow_loopback)
-        return norm.key, warnings
     except (UrlRejected, ValueError):
         warnings.append("invalid_canonical_url")
         return None, warnings
+
+    try:
+        final_norm = normalize(final_url, allow_loopback=allow_loopback)
+        if norm.registered_domain != final_norm.registered_domain:
+            warnings.append("cross_domain_canonical_ignored")
+            return None, warnings
+    except (UrlRejected, ValueError):
+        pass
+
+    return norm.key, warnings
 
 
 def _extract_robots_meta(tree: LexborHTMLParser) -> RobotsMeta:

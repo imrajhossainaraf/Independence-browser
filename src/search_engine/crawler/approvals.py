@@ -26,6 +26,8 @@ class FetchApproval:
         max_bytes: int = 2 * 1024 * 1024,
         expected_content_types: tuple[str, ...] | None = None,
         kind: str = "page",
+        etag: str | None = None,
+        last_modified: str | None = None,
         _sentinel: object = None,
     ) -> None:
         if _sentinel is not _SENTINEL:
@@ -39,6 +41,8 @@ class FetchApproval:
         self.max_bytes = max_bytes
         self.expected_content_types = expected_content_types
         self.kind = kind
+        self.etag = etag
+        self.last_modified = last_modified
         self._consumed = False
 
     @property
@@ -96,6 +100,8 @@ def issue_fetch_approval(
     max_bytes: int = 2 * 1024 * 1024,
     expected_content_types: tuple[str, ...] | None = None,
     kind: str = "page",
+    etag: str | None = None,
+    last_modified: str | None = None,
 ) -> FetchApproval:
     """Issue a single-use FetchApproval for a validated URL and pinned IP."""
     parsed = urlsplit(url)
@@ -111,6 +117,8 @@ def issue_fetch_approval(
         max_bytes=max_bytes,
         expected_content_types=expected_content_types,
         kind=kind,
+        etag=etag,
+        last_modified=last_modified,
         _sentinel=_SENTINEL,
     )
 

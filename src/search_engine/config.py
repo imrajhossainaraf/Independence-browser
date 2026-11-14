@@ -91,6 +91,7 @@ class Settings(BaseSettings):
     max_pages: int = Field(default=500, ge=1, le=HARD_MAX_PAGES)
     max_depth: int = Field(default=3, ge=0, le=HARD_MAX_DEPTH)
     max_pages_per_host: int = Field(default=200, ge=1, le=HARD_MAX_PAGES)
+    recrawl_after_days: int = Field(default=7, ge=1, le=365)
 
     # Byte limits after decoding (D9)
     max_html_bytes: int = Field(default=2 * MIB, ge=1, le=HARD_HTML_BYTES)

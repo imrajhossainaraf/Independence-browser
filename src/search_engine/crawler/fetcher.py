@@ -174,6 +174,10 @@ class SafeFetcher:
             "User-Agent": self.settings.user_agent,
             "Accept-Encoding": "gzip, deflate",
         }
+        if approval.etag:
+            headers["If-None-Match"] = approval.etag
+        if approval.last_modified:
+            headers["If-Modified-Since"] = approval.last_modified
         if approval.kind == "image":
             headers["Accept"] = "image/webp,image/png,image/jpeg;q=0.9,*/*;q=0.1"
         else:
@@ -245,6 +249,21 @@ class SafeFetcher:
                 duration_seconds=elapsed,
                 etag=resp.headers.get("etag"),
                 last_modified=resp.headers.get("last-modified"),
+            )
+
+        # Check for 304 Not Modified (conditional request)
+        if resp.status_code == 304:
+            return FetchResult(
+                url=approval.url,
+                status_code=304,
+                outcome="not_modified",
+                content_type=ct,
+                body=b"",
+                headers=resp.headers,
+                peer_ip=resp.peer_ip,
+                duration_seconds=elapsed,
+                etag=resp.headers.get("etag") or approval.etag,
+                last_modified=resp.headers.get("last-modified") or approval.last_modified,
             )
 
         if resp.status_code == 429:

@@ -30,6 +30,7 @@ class GroupedDocument:
     word_count: int
     published_at: str | None = None
     canonical_url: str | None = None
+    canonical_group_id: int | None = None
     content_hash: str | None = None
     host: str = ""
     duplicate_count: int = 1
@@ -49,6 +50,8 @@ class GroupedDocument:
             "host": self.host,
             "duplicate_count": self.duplicate_count,
         }
+        if self.canonical_group_id is not None:
+            data["canonical_group_id"] = self.canonical_group_id
         if self.score_explanation:
             data["score_explanation"] = self.score_explanation.to_dict()
         return data
@@ -63,16 +66,40 @@ def extract_host(url: str) -> str:
         return ""
 
 
-def normalize_group_key(canonical_url: str | None, final_url: str, content_hash: str | None) -> str:
-    """Derive canonical group key based on canonical URL or content hash."""
+_INDEX_SUFFIXES = (
+    "/index.html",
+    "/index.htm",
+    "/index.php",
+    "/index.asp",
+    "/default.html",
+    "/default.htm",
+)
+
+
+def normalize_group_key(
+    canonical_url: str | None,
+    final_url: str,
+    content_hash: str | None,
+    canonical_group_id: int | None = None,
+) -> str:
+    """Derive canonical group key based on canonical_group_id, content hash, or canonical URL."""
+    if canonical_group_id is not None:
+        return f"group_id:{canonical_group_id}"
     if content_hash and content_hash.strip():
-        return f"hash:{content_hash.strip()}"
+        return f"hash:{content_hash.strip().lower()}"
     target = (canonical_url or final_url).strip().lower()
     # Strip protocol and trailing slash for grouping
     if target.startswith("https://"):
         target = target[8:]
     elif target.startswith("http://"):
         target = target[7:]
+
+    # Strip index file variants
+    for suffix in _INDEX_SUFFIXES:
+        if target.endswith(suffix):
+            target = target[: -len(suffix)]
+            break
+
     target = target.rstrip("/")
     return f"url:{target}"
 
@@ -91,7 +118,9 @@ def group_and_paginate(
     # 1. Group candidates by canonical key
     groups: dict[str, list[GroupedDocument]] = {}
     for doc in candidates:
-        key = normalize_group_key(doc.canonical_url, doc.url, doc.content_hash)
+        key = normalize_group_key(
+            doc.canonical_url, doc.url, doc.content_hash, doc.canonical_group_id
+        )
         groups.setdefault(key, []).append(doc)
 
     # 2. Pick best document per group as representative
@@ -113,6 +142,7 @@ def group_and_paginate(
             word_count=best.word_count,
             published_at=best.published_at,
             canonical_url=best.canonical_url,
+            canonical_group_id=best.canonical_group_id,
             content_hash=best.content_hash,
             host=host,
             duplicate_count=dup_count,

@@ -18,7 +18,9 @@ from typing import Any
 
 from search_engine.config import Settings
 from search_engine.crawler.blocklist import Blocklist
+from search_engine.crawler.dedup import is_valid_canonical, resolve_canonical_group
 from search_engine.crawler.fetcher import FetchResult, Redirect, SafeFetcher
+from search_engine.crawler.freshness import enqueue_stale_urls
 from search_engine.crawler.frontier import Frontier, FrontierConfig, QueuedUrl
 from search_engine.crawler.normalize import normalize
 from search_engine.crawler.preflight import verify_preflight_approval
@@ -28,7 +30,7 @@ from search_engine.crawler.sources import build_allowlist, parse_seeds, read_lin
 from search_engine.db import Database
 from search_engine.extract.adapters import extract_content
 from search_engine.extract.models import AdapterStatus
-from search_engine.indexer.build import upsert_document_index
+from search_engine.indexer.build import deactivate_document, upsert_document_index
 from search_engine.net.httpx_transport import HttpxTransport
 from search_engine.net.resolver import Resolver, SystemResolver
 from search_engine.net.transport import Transport
@@ -173,6 +175,8 @@ class CrawlPipeline:
         run_id: str | None = None,
         max_pages: int | None = None,
         max_time_seconds: float | None = None,
+        recrawl: bool = False,
+        recrawl_stale_days: int | None = None,
     ) -> PipelineResult:
         """Execute the crawl pipeline until limits, empty queue, STOP file, or signal."""
         t0 = self._clock()
@@ -204,6 +208,13 @@ class CrawlPipeline:
             # Cold start resume: reset any in-flight leases back to pending
             frontier.reset_leases()
 
+            # Stale recrawl policy
+            if recrawl or recrawl_stale_days is not None:
+                days = recrawl_stale_days or self.settings.recrawl_after_days
+                enqueued = enqueue_stale_urls(conn, recrawl_after_days=days)
+                if enqueued:
+                    logger.info("Enqueued %d stale URLs for recrawl.", enqueued)
+
             # Seed ingestion
             if seeds:
                 for seed_url in seeds:
@@ -213,9 +224,18 @@ class CrawlPipeline:
                             allow_loopback=self.frontier_config.allow_loopback,
                         )
                         self.allowlist_domains.add(norm.registered_domain)
+                        if recrawl:
+                            # If recrawling, reset existing seed url to pending
+                            conn.execute(
+                                "UPDATE urls SET status = 'pending', retry_count = 0 "
+                                "WHERE url_key = ?",
+                                (norm.key,),
+                            )
                         res = frontier.add_seed(norm)
                         if res.created:
                             report.record(Reason.ACCEPTED, norm.key, "seed_added")
+                        elif recrawl:
+                            report.record(Reason.ACCEPTED, norm.key, "seed_recrawled")
                         else:
                             report.record(Reason.SKIPPED_DUPLICATE, norm.key, "seed_already_exists")
                     except Exception as exc:  # noqa: BLE001
@@ -318,14 +338,39 @@ class CrawlPipeline:
         url = item.url_key
         iso_now = datetime.now(UTC).isoformat()
 
+        # Step 0: Check existing document for this url_id (for conditional requests & updates)
+        existing_doc = conn.execute(
+            "SELECT id, final_url, canonical_url, canonical_group_id, content_hash, "
+            "raw_hash, etag, last_modified_header, status, fetched_at "
+            "FROM documents WHERE url_id = ?",
+            (item.id,),
+        ).fetchone()
+
+        etag = str(existing_doc["etag"]) if existing_doc and existing_doc["etag"] else None
+        last_mod = (
+            str(existing_doc["last_modified_header"])
+            if existing_doc and existing_doc["last_modified_header"]
+            else None
+        )
+
         # Step 1: Scheduler approval (DNS, IP policy, robots, delay, concurrency)
-        approval = self.scheduler.approve(url, kind="page")
+        approval = self.scheduler.approve(
+            url,
+            kind="page",
+            etag=etag,
+            last_modified=last_mod,
+        )
         if isinstance(approval, Denial):
             if approval.reason == "politeness_delay":
                 wait_s = approval.retry_after_seconds or 0.1
                 if wait_s <= 2.0:
                     time.sleep(wait_s)
-                    approval = self.scheduler.approve(url, kind="page")
+                    approval = self.scheduler.approve(
+                        url,
+                        kind="page",
+                        etag=etag,
+                        last_modified=last_mod,
+                    )
 
         if isinstance(approval, Denial):
             if approval.reason == "robots_disallowed":
@@ -366,6 +411,10 @@ class CrawlPipeline:
             elif add_res.status == "skipped":
                 report.record(Reason.SKIPPED_LIMIT, target_url, add_res.reason or "skipped")
 
+            # Redirect consolidation: deactivate if hopped URL had active document
+            if existing_doc and existing_doc["status"] == "active":
+                deactivate_document(conn, int(existing_doc["id"]), reason="redirected")
+
             # Complete the original hopped URL
             frontier.complete(item.id)
             return
@@ -374,6 +423,31 @@ class CrawlPipeline:
         if not isinstance(res, FetchResult):
             frontier.fail_permanent(item.id, reason="unknown_fetch_result")
             report.record(Reason.FAILED, url, "unknown_fetch_result")
+            return
+
+        # Check 404 / 410 Gone (deactivate document per Step 17)
+        if res.status_code in (404, 410):
+            if existing_doc:
+                deactivate_document(conn, int(existing_doc["id"]), reason=f"http_{res.status_code}")
+                report.record(Reason.FAILED, url, f"http_{res.status_code}_deactivated")
+            else:
+                report.record(Reason.FAILED, url, f"status_{res.status_code}_permanent")
+            frontier.fail_permanent(item.id, reason=f"http_{res.status_code}")
+            return
+
+        # Check 304 Not Modified (conditional request)
+        if res.status_code == 304 or res.outcome == "not_modified":
+            if existing_doc:
+                doc_repo.touch_document(
+                    int(existing_doc["id"]),
+                    fetched_at=iso_now,
+                    updated_at=iso_now,
+                    etag=res.etag,
+                    last_modified=res.last_modified,
+                )
+            report.record(Reason.FETCHED, url, "status_304")
+            report.record(Reason.STORED, url, "unchanged_refreshed")
+            frontier.complete(item.id)
             return
 
         if res.outcome == "retryable":
@@ -405,11 +479,46 @@ class CrawlPipeline:
             report.record(Reason.UNSUPPORTED, url, "unsupported_content_type")
             return
 
+        # Check if unchanged content on existing active document
+        if (
+            existing_doc
+            and existing_doc["status"] == "active"
+            and doc is not None
+            and existing_doc["content_hash"] == doc.content_hash
+        ):
+            # Unchanged content only refreshes timestamps and headers
+            doc_repo.touch_document(
+                int(existing_doc["id"]),
+                fetched_at=iso_now,
+                updated_at=iso_now,
+                etag=res.etag,
+                last_modified=res.last_modified,
+            )
+            report.record(Reason.STORED, url, "unchanged_refreshed")
+            frontier.complete(item.id)
+            return
+
         # Check robots meta noindex directive
         is_noindex = extract_res.status == AdapterStatus.NOINDEX or (
             doc is not None and doc.robots_meta.noindex
         )
         doc_status = "noindex" if is_noindex else "active"
+
+        # Validate canonical URL (must be safe and same registered domain)
+        canonical_url = doc.canonical_url if doc else None
+        if canonical_url and not is_valid_canonical(
+            canonical_url, res.url, allow_loopback=self.frontier_config.allow_loopback
+        ):
+            canonical_url = None
+
+        # Resolve canonical group ID (exact hash, canonical url, or trailing slash/index variant)
+        group_id = resolve_canonical_group(
+            conn,
+            final_url=res.url,
+            canonical_url=canonical_url,
+            content_hash=doc.content_hash if doc else None,
+            allow_loopback=self.frontier_config.allow_loopback,
+        )
 
         # Compress text for storage
         text_gz = (
@@ -427,7 +536,9 @@ class CrawlPipeline:
             url_id=item.id,
             doc_type=extract_res.doc_type if extract_res.doc_type != "unknown" else "page",
             final_url=res.url,
-            canonical_url=doc.canonical_url if doc else None,
+            canonical_url=canonical_url,
+            canonical_group_id=group_id,
+            content_type=res.content_type,
             title=doc.title if doc else "",
             headings=doc.headings_text if doc else "",
             description=doc.description if doc else "",
@@ -437,6 +548,8 @@ class CrawlPipeline:
             word_count=doc.word_count if doc else 0,
             content_hash=doc.content_hash if doc else None,
             raw_hash=raw_hash,
+            etag=res.etag,
+            last_modified_header=res.last_modified,
             published_at=doc.published_at if doc else None,
             fetched_at=iso_now,
         )

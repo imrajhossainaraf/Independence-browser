@@ -25,7 +25,7 @@ Release A (v0.1.0). Steps 19, 20, 28 are Release B and skipped.
 | 14 | Snippets (M1) | done | step-14 | 473 tests, 89% cov; Milestone M1 achieved, safe snippets, sentence splitter, quality report in docs/m1_quality_report.md (ADR-023) |
 | 15 | Frontier | done | step-15 | 489 tests, 88% cov; SQLite-backed queue, leases, crash recovery, retries, host caps, allowlist/blocklist (ADR-024) |
 | 16 | Controlled crawl pipeline | done | step-16 | 499 tests, 88% cov; pipeline, loopback link extraction, preflight manifest (ADR-025) |
-| 17 | Deduplication and freshness | todo | | |
+| 17 | Deduplication and freshness | done | step-17 | 508 tests, 87% cov; exact hash, canonical grouping, 304, 404 deactivation (ADR-026) |
 | 18 | News ingestion | todo | | |
 | 21 | Panels and home | todo | | |
 | 22-23 | API and thin client (M2) | todo | | |

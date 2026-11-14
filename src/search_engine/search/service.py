@@ -308,6 +308,7 @@ class SearchService:
                     word_count=c["word_count"],
                     published_at=c["published_at"],
                     canonical_url=c["canonical_url"],
+                    canonical_group_id=c.get("canonical_group_id"),
                     content_hash=c["content_hash"],
                     host=host,
                     score_explanation=explanation,
@@ -442,6 +443,7 @@ class SearchService:
                         d.title,
                         COALESCE(d.canonical_url, d.final_url, u.url_key, '') AS url,
                         d.canonical_url,
+                        d.canonical_group_id,
                         d.content_hash,
                         h.host,
                         bm25(doc_fts, {w_str}) AS raw_bm25,
@@ -466,6 +468,7 @@ class SearchService:
                         d.title,
                         COALESCE(d.canonical_url, d.final_url, u.url_key, '') AS url,
                         d.canonical_url,
+                        d.canonical_group_id,
                         d.content_hash,
                         h.host,
                         bm25(doc_fts_tri, {tri_weights}) AS raw_bm25,
@@ -491,6 +494,9 @@ class SearchService:
                     "title": str(r["title"] or ""),
                     "url": str(r["url"] or ""),
                     "canonical_url": str(r["canonical_url"]) if r["canonical_url"] else None,
+                    "canonical_group_id": int(r["canonical_group_id"])
+                    if r["canonical_group_id"] is not None
+                    else None,
                     "content_hash": str(r["content_hash"]) if r["content_hash"] else None,
                     "host": str(r["host"] or ""),
                     "raw_bm25": float(r["raw_bm25"]),
