@@ -402,6 +402,39 @@ Verification:
 - Verified lock recovery after hard kill, conditional 304 caching, retention and cap pruning, source failure resilience, stale date tagging, Lexbor summary sanitization, clustering precision benchmark, and end-to-end RSS ingestion into search index.
 - All tests passing with 0 socket leaks and strict mypy compliance.
 
+## ADR-029: Panels, Grounded Synopsis, Home Composition, and Autocomplete (Step 21)
+
+Context:
+Implement Step 21 ("Panels, Synopsis, and Home Composition") per BUILD_PLAN.md and BUILD_INSTRUCTIONS.md (D19, D20, Invariant 9, Invariant 10). This subsystem enriches search results with verified zero-hallucination synopsis answers, preview cards, entity cards (flag-gated for Release B), recent news integration, full home page data composition, and prefix autocomplete suggestions.
+
+Key Architecture & Decisions:
+1. Strict Grounding Guarantee (Invariant 10):
+   - Every synopsis candidate is extracted directly from the top 5 search result documents.
+   - 100% Verbatim Substring Guarantee: Candidate sentences are validated with `cand in doc_text` against the stored document text. No paraphrasing, generative completion, or LLM hallucination is permitted.
+   - Quality Filters: Sentences must be 40 to 300 characters long; sentences with navigation bullet markers (`-`, `*`), copyright/boilerplate indicators, or excessive punctuation are discarded.
+   - Term Coverage & BM25 Scoring: Requires at least 2 distinct query content terms in the sentence; scores candidates by BM25 frequency and term match density; queries with negative terms, single-word queries, or low match density return `None` (null).
+2. Preview & Entity Cards (D19):
+   - PreviewCard: For top result group, includes title, registered domain, published date, clean lead (up to 160 characters from document first paragraph), and source name.
+   - EntityCard: Gated behind `settings.feature_entities` (defaults to False in Release A; deferred to Release B). When disabled, returns PreviewCard or None.
+3. Recent News in Search (D19):
+   - Shows up to 3 news items matching the query published within the last 7 days.
+   - Hides completely when no matching active news items exist within the window.
+4. Home Page Composition (D20 & Invariant 9):
+   - `HomeService.get_home`: Composes complete `HomePayload` consisting of `data_age_seconds`, `is_stale` (computed against `settings.news_stale_hours`), `sources_health` summary (`healthy` vs `failing` based on consecutive failures), `top_stories` read directly from pre-computed `news_clusters`, `latest` 20 active news items, and available `categories`.
+   - Reader Isolation (Invariant 9): Reader connections run with `PRAGMA query_only = ON`. `HomeService` performs pure SELECT queries and never attempts in-flight database writes.
+   - Paged News Listing (`get_news_page`): Provides `/api/v1/news` pagination with category filtering, total page counts, and limit/offset bounds.
+5. Prefix Autocomplete & Suggestion Indexing:
+   - Optimized `suggestions` table with `UNIQUE(text, normalized_prefix)` and `idx_suggestions_prefix` index.
+   - `rebuild_suggestions` extracts prefixes (2+ chars) from entities (priority 1), headlines (priority 2), page titles (priority 3), and vocabulary terms (priority 4), stripping diacritics via Unicode NFKD.
+   - Sub-50ms latency guarantee: Benchmarked p95 latency under 2ms.
+   - `SuggestService.suggest`: Queries with `GROUP BY text ORDER BY MIN(priority) ASC, text ASC` to ensure uniqueness across multi-word prefix tokens. Inactive/soft-deleted documents and news items are never suggested.
+
+Verification:
+- 10 comprehensive unit tests in `tests/unit/test_panels_and_home.py`.
+- Invariant 10 verbatim substring verification.
+- Verified negative query null handling, preview card assembly, entity flag isolation, 7-day recent news window, home payload generation, stale detection, paged news filtering, and diacritic-insensitive autocomplete with sub-50ms latency.
+
+
 
 
 

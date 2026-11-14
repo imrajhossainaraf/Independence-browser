@@ -6,9 +6,14 @@ import re
 import sqlite3
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+from search_engine.config import Settings
 from search_engine.indexer import decompress_text
+
+if TYPE_CHECKING:
+    from search_engine.experience.models import Panel, RecentNewsItem, Synopsis
+    from search_engine.experience.panels import PanelService
 from search_engine.indexer.fts import (
     DEFAULT_BM25_WEIGHTS,
     DEFAULT_TRI_WEIGHTS,
@@ -103,6 +108,9 @@ class SearchResponse:
     page_size: int = 10
     total_groups: int = 0
     ranking_config: RankingConfig | None = None
+    panel: Panel | None = None
+    synopsis: Synopsis | None = None
+    recent_news: list[RecentNewsItem] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         data: dict[str, Any] = {
@@ -114,6 +122,11 @@ class SearchResponse:
             "page": self.page,
             "page_size": self.page_size,
             "results": [r.to_dict() for r in self.results],
+            "panel": self.panel.model_dump() if self.panel is not None else None,
+            "synopsis": self.synopsis.model_dump() if self.synopsis is not None else None,
+            "recent_news": (
+                [n.model_dump() for n in self.recent_news] if self.recent_news is not None else None
+            ),
         }
         if self.suggestion:
             data["suggestion"] = self.suggestion
@@ -126,9 +139,16 @@ class SearchResponse:
 class SearchService:
     """Search service executing BM25 retrieval, explainable ranking, grouping, and suggestions."""
 
-    def __init__(self, conn: sqlite3.Connection):
+    def __init__(self, conn: sqlite3.Connection, settings: Settings | None = None):
         self._conn = conn
         self._conn.row_factory = sqlite3.Row
+        self._settings = settings
+        if settings is not None:
+            from search_engine.experience.panels import PanelService
+
+            self._panel_service: PanelService | None = PanelService(settings)
+        else:
+            self._panel_service = None
         self._vocab: dict[str, int] | None = None
 
     def search(
@@ -257,6 +277,9 @@ class SearchService:
                         page_size=limit,
                         total_groups=corrected_resp.total_groups,
                         ranking_config=config,
+                        panel=corrected_resp.panel,
+                        synopsis=corrected_resp.synopsis,
+                        recent_news=corrected_resp.recent_news,
                     )
                 if spelling:
                     return SearchResponse(
@@ -392,6 +415,17 @@ class SearchService:
             if sp:
                 suggestion = sp.suggested_query
 
+        panel: Panel | None = None
+        synopsis: Synopsis | None = None
+        recent_news: list[RecentNewsItem] | None = None
+        if self._panel_service is not None and auto_correct_depth == 0:
+            panel, synopsis, recent_news = self._panel_service.assemble(
+                self._conn,
+                query,
+                results,
+                now=reference_time,
+            )
+
         page_num = (offset // limit) + 1
         return SearchResponse(
             query=query,
@@ -406,6 +440,9 @@ class SearchService:
             page_size=limit,
             total_groups=total_groups,
             ranking_config=config,
+            panel=panel,
+            synopsis=synopsis,
+            recent_news=recent_news,
         )
 
     def _fetch_candidates(
