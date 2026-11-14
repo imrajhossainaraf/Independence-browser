@@ -84,6 +84,19 @@ Decision:
   - Verification: 20 checked-in diverse fixtures in `tests/fixtures/html/` with hand-crafted gold text passed all quality thresholds (avg F1 = 0.993, min F1 = 0.953, 0.0% boilerplate leakage).
 Consequences: Content adapters (Step 9) and the FTS5 indexer (Step 10) can consume `ExtractedDocument` directly.
 
+## ADR-016: Spike S3 result, subprocess isolation is GO (Spike S3)
+
+Context: D10 and D17 require PDF extraction (Step 9) and image decoding (Step 19) to run in an isolated worker subprocess with spawn semantics, a hard timeout, process-tree termination, and a memory limit (default 512 MiB). On Windows, we prototyped both Win32 Job Objects (via `ctypes`) and `psutil` tree monitoring.
+Findings & Evaluation (`spikes/s3_isolation`):
+- Startup overhead: Bare Popen ~590ms, Job Object ~397ms, psutil monitor ~459ms (negligible delta relative to Python VM startup).
+- Memory limit enforcement: Job Object sets `JOB_OBJECT_LIMIT_JOB_MEMORY`, causing the Windows kernel to immediately refuse allocations above the limit (producing instant `MemoryError` in child). `psutil` monitoring checks RSS across the entire process tree and terminates it on breach.
+- Timeout & tree termination: `kill_process_tree` terminates the parent and recursively all descendant processes on timeout or memory breach, leaving zero orphan processes.
+Decision: GO. Adopt a dual-layer isolation approach:
+1. On Windows, worker subprocesses are bound to a Win32 Job Object with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` and kernel memory limits.
+2. Cross-platform timeout and process tree killing are enforced via `psutil` (7.2.2, BSD-3-Clause).
+Consequences: Step 9 will build `src/search_engine/extract/pdf.py` using this isolated worker harness.
+
+
 
 
 

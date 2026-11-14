@@ -14,6 +14,7 @@ dependencies = [
     "charset-normalizer>=3.5.2",
     "httpx>=0.28.1",
     "protego>=0.7.0",
+    "psutil>=7.2.2",
     "pydantic>=2.14.2",
     "pydantic-settings>=2.16.2",
     "python-dateutil>=4.0.0",
@@ -53,8 +54,8 @@ src = ["src", "tests", "scripts"]
 select = ["E", "F", "I", "B", "UP", "S", "PT"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101", "S104", "PT018"]
-"spikes/**" = ["S101", "S104", "PT018", "E501"]
+"tests/**" = ["S101", "S104", "PT018", "S603"]
+"spikes/**" = ["S101", "S104", "PT018", "E501", "S603"]
 "scripts/run_check.py" = ["S603"]
 
 [tool.mypy]
