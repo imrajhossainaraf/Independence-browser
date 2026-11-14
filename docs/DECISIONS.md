@@ -236,6 +236,25 @@ Decision:
   - 473 total project tests passing with 89% overall test coverage.
 Consequences: Phase C (Content and Search) is fully verified and Milestone M1 is achieved. The engine is ready for Phase D (Crawler Pipeline & News Ingestion, Steps 15-18).
 
+## ADR-024: Resumable SQLite Crawl Frontier (Step 15)
+
+Context: Step 15 requires an independent SQLite-backed queue that decides what to crawl next safely and resumably, managing seed insertion, depth tracking, discovery sources (seeds, links, sitemaps, feeds, redirects), priority ordering, per-host grouping, per-host caps, global page/runtime limits, allowlist scope (D12), duplicate suppression by normalized key with depth lowering, and crash-safe lease timeouts.
+Decision:
+- Implemented `src/search_engine/crawler/frontier.py`:
+  - `FrontierConfig`: Settings-driven configuration specifying `max_depth` (default 3), `max_pages` (default 500), `max_pages_per_host` (default 200), `lease_timeout_seconds` (default 300s), `max_retries` (default 3), `backoff_base_seconds` (2s), `backoff_max_seconds` (60s), `allowlist_mode` (D12), allowlist domains/hosts, and blocklists.
+  - `calculate_priority`: Prioritizes seeds (100) > redirects (90) > sitemaps/feeds (80) > links by depth (`max(0, 50 - depth*10)`).
+  - `Frontier.add_seed`: Normalizes URL, ensures host record, enforces blocklist/allowlist, adds seed at depth 0 with priority 100 in `pending` status. Re-adding an existing URL at depth 0 updates depth and priority without duplication.
+  - `Frontier.add_discovered_url`: Handles links, sitemaps, feeds, and redirects. Records link relationships in `links` table. Merges duplicate URLs by normalized key: if rediscovered at a lower depth, updates depth and priority in `urls`, and restores URLs previously skipped due to depth limit back to `pending`.
+  - Enforces policy gates: blocklisted URLs are marked `blocked`, non-allowlisted URLs are marked `skipped` (`outside_allowlist`), nofollow links are recorded in `links` and marked `skipped` (`nofollow`), depth > `max_depth` is marked `skipped` (`depth_exceeded`), and host/global caps prevent queueing. None of these reach `pending`.
+  - `Frontier.lease_next`: Recovers expired leases automatically. Excludes active hosts and enforces per-host politeness by leasing at most one URL per host per batch. Selects candidates in `priority DESC, depth ASC, id ASC` order. Sets `lease_expires_at = now + lease_timeout`.
+  - Transitions: `complete` (marks `done`, increments `hosts.pages_stored`), `retry` (exponential backoff `min(max, base * 2^(retries-1))`, transitions to `failed_permanent` when `max_retries` exceeded), `fail_permanent`, `skip`, and `block`.
+  - Crash recovery & resumption: `recover_crashed_leases` resets expired `leased` URLs back to `pending`. `reset_leases` provides cold-start recovery across crawler process restarts.
+  - Metrics: `stats` returns dictionary counts across all seven SQLite URL statuses (`pending`, `leased`, `done`, `retry`, `failed_permanent`, `blocked`, `skipped`).
+- Verification:
+  - 16 unit tests in `tests/unit/test_frontier.py` verifying seed insertion, duplicate merging with depth lowering, depth-limit restoration, per-host cap, global page cap, allowlist scope, blocklist filtering, nofollow link tracking, leasing priority, host politeness, retry exponential backoff transitions, mid-lease simulated crash recovery, and cold-start lease resets.
+  - 489 total project tests passing with 88% overall test coverage and sockets blocked.
+Consequences: The crawler frontier is resilient, bounded, and crash-safe. Step 16 can now connect the crawl pipeline with minimal safety controls (STOP file, disk space check, Windows-safe shutdown, reconciling run report).
+
 
 
 

@@ -23,7 +23,8 @@ Release A (v0.1.0). Steps 19, 20, 28 are Release B and skipped.
 | 12 | Evaluation harness | done | step-12 | 451 tests, 88% cov; 60-doc corpus, 24 queries (16 dev, 8 held-out), baseline.json, regression detection (ADR-021) |
 | 13 | Ranking and suggestions | done | step-13 | 461 tests, 88% cov; D5/D6/D7 ranking, grouping, host diversity, did-you-mean, ablation table in docs/evaluation.md (ADR-022) |
 | 14 | Snippets (M1) | done | step-14 | 473 tests, 89% cov; Milestone M1 achieved, safe snippets, sentence splitter, quality report in docs/m1_quality_report.md (ADR-023) |
-| 15-17 | Frontier, crawl pipeline, dedup | todo | | |
+| 15 | Frontier | done | step-15 | 489 tests, 88% cov; SQLite-backed queue, leases, crash recovery, retries, host caps, allowlist/blocklist (ADR-024) |
+| 16-17 | Crawl pipeline, dedup | todo | | |
 | 18 | News ingestion | todo | | |
 | 21 | Panels and home | todo | | |
 | 22-23 | API and thin client (M2) | todo | | |
