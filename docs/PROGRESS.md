@@ -35,8 +35,8 @@ Release A (v0.1.0). Steps 19, 20, 28 are Release B and skipped.
 | 25 | Operator controls & policy | done | step-25 | 584 tests, 86% cov; Blocklist, document/news/image/entity removal, pause/resume/stop, drive audit, retention purge, legal/policy docs (ADR-033) |
 | 26 | Metrics & diagnostic reports | done | step-26 | 589 tests, 86% cov; Metrics persistence, percentile calculations, diagnostic gatherers, CLI report command (ADR-034) |
 | 27 | Full evaluation & benchmarks | done | step-27 | 596 tests, 86% cov; 58 queries, held-out P@5 0.66, MRR 0.92, nDCG@10 0.83, 10-point daily-use checklist, Section 7 benchmarks (ADR-035) |
-| 29 | Real collection (human controlled) | blocked on human | | |
-| 30 | Package v0.1.0 | todo | | |
+| 29 | Real collection preflight & safety | prepared / locked | step-29 | 602 tests, 85% cov; Preflight guide, manifest tamper detection, seeds/news templates, STOP/PAUSE rehearsal (ADR-036) |
+| 30 | Package v0.1.0 | done | step-30 / v0.1.0 | 607 tests, 85% cov; Version 0.1.0, release-check.ps1, architecture.md, known-limitations.md, release notes, configuration reference (ADR-037) |
 
 ## Working mode
 

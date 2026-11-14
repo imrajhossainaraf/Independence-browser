@@ -689,6 +689,60 @@ Verification:
 - All Section 7 performance, quality, and reliability gates verified and passing.
 - 1:1 parity between PowerShell scripts and Makefile targets maintained.
 
+---
+
+## ADR-036: Step 29 Controlled Real Collection Preparation & Air-Gap Verification
+
+Date: 2026-11-14  
+Status: Accepted
+
+Context:
+Step 29 governs controlled real collection under Milestone M3. Under Section 5 (Invariants) and Decision D13, the crawler strictly refuses any outbound public network connections unless `real_network_enabled=true` AND `data/preflight.approved.json` exists with a cryptographic SHA-256 digest matching current input files (`data/seeds.txt`, `data/news_sources.txt`, `data/entities_seed.txt`), User-Agent token, policy URL, and hard safety caps.
+
+Decisions:
+1. Prepared complete preflight documentation and verification checklist in `docs/PREFLIGHT.md`.
+2. Authored input templates: `data/seeds.txt` and pipe-delimited `data/news_sources.txt`.
+3. Added automated unit tests in `tests/unit/test_preflight_rehearsal.py` verifying:
+   - Deterministic manifest hashing and tamper detection.
+   - Refusal of real-mode crawling when preflight approval is missing or out-of-date.
+   - Safe no-op verification when real network is disabled.
+   - Emergency controls rehearsal: `data/STOP` and `data/PAUSE` files cleanly recognized.
+   - Allowlist derivation from seed registered domains.
+4. Documented Windows Task Scheduler configuration for `scripts/news-poll.ps1`.
+5. Preflight approval generation remains strictly manual via `search-engine approve-preflight` by the human operator.
+
+---
+
+## ADR-037: Step 30 Release A (v0.1.0) Packaging & Clean Verification Pipeline
+
+Date: 2026-11-14  
+Status: Accepted
+
+Context:
+Step 30 packages Release A (v0.1.0) of Independent Search Engine for documented, repeatable daily use on a personal Windows laptop.
+
+Decisions:
+1. Bumped version to `0.1.0` in `pyproject.toml`, `src/search_engine/__init__.py`, and `uv.lock`.
+2. Created `scripts/release-check.ps1` (mirrored by `Makefile` target `release-check:`) automating:
+   - Clean checkout cloning to a temporary directory without network access.
+   - Dependency sync (`uv sync --frozen`).
+   - Project quality check (`scripts/run_check.py`).
+   - Fixture crawl (`search-engine crawl --mode fixture`).
+   - Fixture news poll (`search-engine news poll --mode fixture`).
+   - Vertical slice demo and index rebuild (`search-engine demo`).
+   - Search smoke test (`search-engine search python`).
+   - Automated 10-point daily-use checklist (`search-engine daily-use`).
+   - Section 7 synthetic benchmarks (`search-engine benchmark`).
+   - Online hot backup and verified restore into a clean directory.
+3. Created comprehensive documentation suite:
+   - `docs/architecture.md`: Full architectural specification, subsystems, data flow, invariants, and concurrency.
+   - `docs/known-limitations.md`: Complete catalogue of Release A operational and architectural boundaries.
+   - `docs/release-notes-v0.1.0.md`: Release notes highlighting features, benchmark numbers, and quality gates.
+   - `docs/configuration.md`: 100% complete configuration reference for all 72 settings across all 12 domains.
+   - `README.md`: Modernized user-facing guide covering Windows setup, daily use, CLI commands, and safety.
+4. Added `tests/unit/test_release_packaging.py` validating version sync, document completeness, configuration coverage, and script parity.
+
+
 
 
 
