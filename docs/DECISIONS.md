@@ -109,6 +109,28 @@ Decision:
 - Verification: 17 unit tests in `tests/unit/test_adapters.py` covering all adapters, isolated worker memory and timeout traps, defusedxml security, gzip bombs, and corrupt inputs. 400 project tests passed with 89% total coverage.
 Consequences: Crawler, indexer, and news pipeline have unified, secure access to multi-format web content.
 
+## ADR-018: Spike S2 result, FTS5 tokenizer and weight bake-off is GO (Spike S2)
+
+Context: D4 and D6 define the FTS5 full-text indexing configuration, BM25 column weights, phrase/NEAR/prefix operators, and WAL-mode concurrency. Before building Step 10 (FTS5 Index), Spike S2 evaluates tokenizers (`unicode61`, `porter unicode61 remove_diacritics 2`, `trigram`), BM25 weight presets, query operators, and concurrent readers during writes on a 30-document mini corpus with 15 hand-graded queries.
+Findings (`spikes/s2_fts5`):
+- Tokenizers:
+  - `unicode61`: MRR = 0.933, nDCG@10 = 0.906. Lacks stemming and diacritic removal; completely fails on unspaced CJK.
+  - `porter unicode61 remove_diacritics 2`: MRR = 1.000, nDCG@10 = 0.955. Stemming + diacritic folding provides 100% top-rank accuracy on European and accented languages (e.g. `café` -> `cafe`, `München` -> `munchen`). Fails on unspaced CJK.
+  - `trigram`: MRR = 1.000, nDCG@10 = 0.962. Successfully handles unspaced CJK (e.g. Chinese `北京气候峰会`), exact substrings, and non-spaced languages.
+- BM25 Column Weights:
+  - D4 Default `(10.0, 5.0, 3.0, 1.0, 1.0)` on `(title, headings, description, body, url_tokens)` achieves MRR = 1.000 and nDCG@10 = 0.955, ensuring title matches reliably outrank body-only mentions.
+- Query Operators:
+  - Exact phrases (`"\"...\""`), proximity (`NEAR(..., 5)`), and prefix wildcards (`"..."*`) function deterministically without syntax errors.
+- WAL Concurrency:
+  - 100 writes and 250 reads executed simultaneously in WAL mode with `busy_timeout = 5000`.
+  - 100% read success (250/250), 0 lock errors, read p50 = 0.32 ms, read p95 = 0.68 ms. Readers and writers never block each other.
+Decision: GO. Adopt the dual-table FTS5 architecture per D4:
+1. Primary index `doc_fts` with `tokenize = 'porter unicode61 remove_diacritics 2'`.
+2. Trigram index `doc_fts_tri(title, body_prefix)` with `tokenize = 'trigram'` for CJK / non-spaced text and substring fallback.
+3. Default BM25 column weights `(10.0, 5.0, 3.0, 1.0, 1.0)`.
+Consequences: Step 10 will implement `src/search_engine/indexer/` based on these validated defaults.
+
+
 
 
 
