@@ -26,6 +26,7 @@ Release A (v0.1.0). Steps 19, 20, 28 are Release B and skipped.
 | 15 | Frontier | done | step-15 | 489 tests, 88% cov; SQLite-backed queue, leases, crash recovery, retries, host caps, allowlist/blocklist (ADR-024) |
 | 16 | Controlled crawl pipeline | done | step-16 | 499 tests, 88% cov; pipeline, loopback link extraction, preflight manifest (ADR-025) |
 | 17 | Deduplication and freshness | done | step-17 | 508 tests, 87% cov; exact hash, canonical grouping, 304, 404 deactivation (ADR-026) |
+| S4 | Spike: poller, server, Task Scheduler | done (GO) | spike-s4 | WAL p95 2.15ms, ProcessLock crash recovery, Task Scheduler documented (ADR-027) |
 | 18 | News ingestion | todo | | |
 | 21 | Panels and home | todo | | |
 | 22-23 | API and thin client (M2) | todo | | |

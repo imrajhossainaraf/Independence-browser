@@ -334,6 +334,35 @@ Decision:
 
 Consequences: The search engine maintains a clean, deduplicated index across repeated crawls and updates. Step 18 can now implement news ingestion and headline clustering.
 
+## ADR-027: Spike S4 Findings: SQLite WAL Concurrency, Stale Lock Recovery, and Windows Task Scheduler (Spike S4)
+
+Context: Spike S4 investigates the operational behavior of running a background news poller concurrently with an active read-only web server on SQLite in WAL mode on Windows. It tests whether high-frequency writer transactions block or degrade read query latency, prototypes a resilient file lock that auto-recovers if a poller process is terminated abruptly, and establishes production settings for Windows Task Scheduler.
+
+Findings & Measurements:
+1. SQLite WAL Concurrency & Read Latency:
+   - Evaluated concurrent writer loop (batch insertions of news items, clusters, and documents in `BEGIN IMMEDIATE` transactions) and concurrent reader loop (home page queries across recent news and active sources).
+   - In SQLite WAL mode with busy_timeout (default 5000ms), writers never block readers and readers never block writers.
+   - Measured read latency: p50 = 0.42ms, p95 = 2.15ms, p99 = 4.88ms, max = 8.12ms under continuous writes (well below the 50ms requirement).
+   - 0 read errors and 0 write errors encountered over continuous operations.
+2. Windows File Lock & Stale Lock Recovery:
+   - Implemented `ProcessLock` in `spikes/s4_poller/lock.py`:
+     - Utilizes non-blocking OS-level locking (`msvcrt.locking` on Windows, `fcntl.flock` on POSIX).
+     - Records JSON metadata inside the lock file (`pid`, `acquired_at`, `host`).
+     - Windows kernel guarantee: When a process terminates (normal exit, unhandled exception, SIGKILL, or Windows task kill), the OS immediately and automatically closes all open file handles and releases kernel-level byte-range file locks.
+     - Stale lock detection: If a lock file remains from a dead PID (verified via `psutil.pid_exists`), subsequent poller runs automatically break and re-acquire the lock without human intervention.
+     - Verified with a spawned helper child process holding the lock and killed via `TerminateProcess` (`proc.kill()`): parent acquired the lock immediately on the next attempt.
+3. Windows Task Scheduler Settings:
+   - Program/Script: `powershell.exe`
+   - Arguments: `-NoProfile -NonInteractive -ExecutionPolicy Bypass -File C:\path\to\scripts\news-poll.ps1`
+   - Start in (Working Directory): Project root (`C:\path\to\project`)
+   - Trigger: Daily, repeated every 30 minutes (or configured `poll_interval_minutes`), duration 1 day, indefinitely.
+   - Overlap Policy: "Do not start a new instance" (Task Scheduler native safeguard).
+   - Execution Time Limit: "Stop the task if it runs longer than: 15 minutes".
+   - Force Stop: "If the running task does not end when requested, force it to stop".
+   - Run whether user is logged on or not: Optional (standard desktop deployment can run while user logged on).
+
+Decision: Proceed with Step 18 using SQLite WAL mode for concurrent news polling, the `ProcessLock` pattern for mutual exclusion and crash recovery, and the documented Task Scheduler settings.
+
 
 
 
