@@ -21,7 +21,7 @@ Release A (v0.1.0). Steps 19, 20, 28 are Release B and skipped.
 | 10 | FTS5 index | done | step-10 | 419 tests, 88% coverage; doc_fts + doc_fts_tri, bm25 weighting, rebuild, consistency (ADR-019) |
 | 11 | Query processing, CLI search | done | step-11 | 441 tests, 89% cov; D5 safe quoting, AND/OR fallback, SearchService, demo.ps1 (ADR-020) |
 | 12 | Evaluation harness | done | step-12 | 451 tests, 88% cov; 60-doc corpus, 24 queries (16 dev, 8 held-out), baseline.json, regression detection (ADR-021) |
-| 13 | Ranking and suggestions | todo | | |
+| 13 | Ranking and suggestions | done | step-13 | 461 tests, 88% cov; D5/D6/D7 ranking, grouping, host diversity, did-you-mean, ablation table in docs/evaluation.md (ADR-022) |
 | 14 | Snippets (M1) | todo | | |
 | 15-17 | Frontier, crawl pipeline, dedup | todo | | |
 | 18 | News ingestion | todo | | |

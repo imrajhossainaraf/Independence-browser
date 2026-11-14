@@ -107,4 +107,3 @@ def test_cli_eval_command(capsys: pytest.CaptureFixture[str]) -> None:
     assert "Search Evaluation Report [DEV SET]" in captured.out
     assert "Regression Check" in captured.out
     assert "PASSED" in captured.out
-

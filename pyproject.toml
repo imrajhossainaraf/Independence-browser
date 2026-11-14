@@ -19,6 +19,7 @@ dependencies = [
     "pydantic-settings>=2.16.2",
     "pypdf>=7.1.0",
     "python-dateutil>=4.0.0",
+    "rapidfuzz>=3.14.6",
     "selectolax>=1.0.2",
     "tldextract>=5.4.0",
     "trafilatura>=2.3.1",
@@ -74,7 +75,7 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = ["tests", "spikes"]
-addopts = "-ra --strict-markers --disable-socket --allow-unix-socket"
+addopts = "-ra --strict-markers --disable-socket --allow-unix-socket --basetemp=.pytest_temp"
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 markers = [

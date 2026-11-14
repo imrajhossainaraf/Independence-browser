@@ -15,7 +15,7 @@ from typing import Any
 from search_engine.evaluation.corpus import EVAL_CORPUS, EvalDocument
 from search_engine.indexer import INDEX_VERSION, compress_text, rebuild_index
 from search_engine.repositories import DocumentRepository, HostRepository, UrlRepository
-from search_engine.search import SearchService
+from search_engine.search import RankingConfig, SearchService
 
 EVAL_DIR = Path(__file__).resolve().parents[3] / "eval"
 
@@ -248,6 +248,7 @@ def evaluate_system(
     queries_file: Path = EVAL_DIR / "queries.csv",
     judgments_file: Path = EVAL_DIR / "judgments.csv",
     ranking_version: str = "bm25_v1",
+    ranking_config: RankingConfig | None = None,
 ) -> EvaluationReport:
     """Execute evaluation over queries matching the split."""
     all_queries = load_queries(queries_file)
@@ -269,7 +270,7 @@ def evaluate_system(
 
     for q in target_queries:
         t0 = time.perf_counter()
-        response = service.search(q.query, limit=10)
+        response = service.search(q.query, limit=10, ranking_config=ranking_config)
         elapsed_ms = (time.perf_counter() - t0) * 1000.0
         latencies.append(elapsed_ms)
 

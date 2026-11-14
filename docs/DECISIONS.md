@@ -186,6 +186,36 @@ Decision:
   - 451 total project tests passing with 88% overall test coverage.
 Consequences: Step 13 can now implement ranking enhancements (freshness, source quality, title boost, phrase boost) and measure impact against the dev baseline while keeping held-out queries strictly untouched.
 
+## ADR-022: Ranking signals, canonical grouping, host diversity, and did-you-mean suggestions (Step 13)
+
+Context: Step 13 implements explainable, deterministic ranking and grouping per Decisions D5, D6, and D7, including bounded freshness with 24h news half-life, source-quality adjustments, title/phrase boosts, deterministic tie-breaking (score DESC, canonical URL ASC), canonical grouping, host diversity in the top 10, did-you-mean spelling suggestions via fts5vocab and rapidfuzz, and score explanations with per-signal switches for ablations.
+Decision:
+- Added runtime dependency `rapidfuzz>=3.14.0` (MIT license, approved fixed technology per BUILD_PLAN Section 4).
+- Added `addopts = "--basetemp=.pytest_temp"` in `pyproject.toml` so pytest temporary directory cleanup never touches Windows protected system temp locations.
+- Implemented `src/search_engine/search/ranking.py`:
+  - `RankingConfig` with switches for every signal (`enable_freshness`, `enable_quality`, `enable_title_boost`, `enable_phrase_boost`, `enable_host_diversity`, `explain`).
+  - `compute_freshness_multiplier`: Bounded to `[1.0, 1.10]` (+10% max). Requires real valid ISO date (future dates get no boost). 365-day half-life for standard pages; 24-hour half-life for news documents.
+  - `compute_quality_multiplier`: Strictly bounded to `[0.95, 1.05]`. Penalizes content under 50 words (-0.03) and under 20 words (-0.05); bonuses for HTTPS (+0.02) and informative title length >= 10 (+0.02).
+  - `compute_title_multiplier`: Exact title match (+15%) and all-terms match (+10%).
+  - `compute_phrase_multiplier`: Multi-term query phrase match in title or description (+10%).
+  - `ScoreExplanation`: Detailed breakdown of multipliers, base BM25 score, final score, and explainable reasons.
+- Implemented `src/search_engine/search/grouping.py`:
+  - `group_and_paginate`: Ingests candidate window (up to 200 candidates), groups by canonical URL or content hash, selects highest-scoring representative per group, applies host diversity in top 10 (at most 2 results per host; excess demoted, never dropped), and paginates over groups (max 20 per page, max 100 visible).
+- Implemented `src/search_engine/search/suggest.py`:
+  - `suggest_spelling`: Loads vocabulary from `doc_fts_vocab`. Uses `rapidfuzz.distance.DamerauLevenshtein` (edit distance <= 1 for terms < 5 chars, <= 2 for terms >= 5 chars) correcting single-character and transposition typos. Suppressed when search results are already solid. Triggers auto-correction banner ("Showing results for X; search instead for Y") only when 0 results and exactly 1 candidate at distance 1.
+- Updated `SearchService`:
+  - Integrated candidate retrieval, ranking signal scoring, canonical grouping, host diversity, and suggestions.
+- Conducted ablation study on dev queries recorded in `docs/evaluation.md`:
+  - All signals either improved or maintained baseline metrics.
+  - Source quality improved nDCG@10 from 0.9046 to 0.9051.
+  - Combined signals achieved 0.9051 nDCG@10, 1.0000 MRR, 0.3125 P@5, and 0.49 ms median latency.
+  - Single end-of-step held-out measurement reported in `docs/evaluation.md`.
+- Verification:
+  - 10 unit tests in `test_ranking_grouping.py` testing title boost, bounded freshness with real dates, news 24h half-life, quality adjustment clamp, duplicate grouping, pagination disjointness and completeness, stable tie-breaking, single-character and transposition typos, and suppression of suggestions on good results.
+  - 461 total project tests passing with 88% overall test coverage and sockets blocked.
+Consequences: Step 14 can now implement snippet generation, query highlighting, and answer synopses for Milestone M1.
+
+
 
 
 
