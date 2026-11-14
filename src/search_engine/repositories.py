@@ -91,3 +91,84 @@ class DocumentRepository:
 
     def count(self) -> int:
         return int(self._conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0])
+
+    def upsert_document(
+        self,
+        *,
+        url_id: int | None = None,
+        news_item_id: str | None = None,
+        doc_type: str = "page",
+        final_url: str | None = None,
+        canonical_url: str | None = None,
+        title: str = "",
+        headings: str = "",
+        description: str = "",
+        text_gz: bytes | None = None,
+        lang: str = "und",
+        status: str = "active",
+        word_count: int = 0,
+        content_hash: str | None = None,
+        raw_hash: str | None = None,
+        published_at: str | None = None,
+        fetched_at: str | None = None,
+    ) -> int:
+        if (url_id is None and news_item_id is None) or (
+            url_id is not None and news_item_id is not None
+        ):
+            raise ValueError("Exactly one of url_id or news_item_id must be provided")
+
+        stamp = fetched_at or _now()
+        cols = (
+            "doc_type, final_url, canonical_url, title, headings, description, "
+            "text_gz, lang, status, word_count, content_hash, raw_hash, "
+            "published_at, fetched_at, updated_at"
+        )
+        update_clause = (
+            "doc_type = excluded.doc_type, final_url = excluded.final_url, "
+            "canonical_url = excluded.canonical_url, title = excluded.title, "
+            "headings = excluded.headings, description = excluded.description, "
+            "text_gz = excluded.text_gz, lang = excluded.lang, status = excluded.status, "
+            "word_count = excluded.word_count, content_hash = excluded.content_hash, "
+            "raw_hash = excluded.raw_hash, published_at = excluded.published_at, "
+            "fetched_at = excluded.fetched_at, updated_at = excluded.updated_at"
+        )
+        values = (
+            doc_type,
+            final_url,
+            canonical_url,
+            title,
+            headings,
+            description,
+            text_gz,
+            lang,
+            status,
+            word_count,
+            content_hash,
+            raw_hash,
+            published_at,
+            stamp,
+            stamp,
+        )
+
+        if url_id is not None:
+            sql = (
+                f"INSERT INTO documents (url_id, {cols}) "  # noqa: S608
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                f"ON CONFLICT (url_id) DO UPDATE SET {update_clause}"
+            )
+            self._conn.execute(sql, (url_id, *values))
+            row = self._conn.execute(
+                "SELECT id FROM documents WHERE url_id = ?", (url_id,)
+            ).fetchone()
+            return int(row[0])
+        else:
+            sql = (
+                f"INSERT INTO documents (news_item_id, {cols}) "  # noqa: S608
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+                f"ON CONFLICT (news_item_id) DO UPDATE SET {update_clause}"
+            )
+            self._conn.execute(sql, (news_item_id, *values))
+            row = self._conn.execute(
+                "SELECT id FROM documents WHERE news_item_id = ?", (news_item_id,)
+            ).fetchone()
+            return int(row[0])

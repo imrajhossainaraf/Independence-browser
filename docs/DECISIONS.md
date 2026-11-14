@@ -130,6 +130,23 @@ Decision: GO. Adopt the dual-table FTS5 architecture per D4:
 3. Default BM25 column weights `(10.0, 5.0, 3.0, 1.0, 1.0)`.
 Consequences: Step 10 will implement `src/search_engine/indexer/` based on these validated defaults.
 
+## ADR-019: FTS5 index implementation and consistency verification (Step 10)
+
+Context: Step 10 requires an inverted full-text index implementation per D4 with weighted BM25 retrieval, covering documents of type `page`, `pdf`, `text`, and `news`, with transaction-safe full rebuild, single-document upsert, document removal, deactivation, and index consistency verification.
+Decision:
+- Added migration `0002_fts_index.sql`:
+  - `doc_fts(title, headings, description, body, url_tokens)` with `tokenize = 'porter unicode61 remove_diacritics 2'`.
+  - `doc_fts_tri(title, body_prefix)` with `tokenize = 'trigram'`.
+  - `doc_fts_vocab` virtual table using `fts5vocab(doc_fts, 'row')`.
+  - Stored initial `index_version` in `index_state`.
+- Implemented `src/search_engine/indexer/`:
+  - `fts.py`: Weighted `bm25()` retrieval with default weights `(10.0, 5.0, 3.0, 1.0, 1.0)` ensuring title matches outrank body-only mentions; CJK character detection with automatic trigram routing and unspaced normalization; URL token extraction (`tokenize_url`); gzip text decompression.
+  - `build.py`: Transaction-safe `rebuild_index` processing all active documents (`page`, `pdf`, `text`, `news`), tracking `IndexBuildReport`; `upsert_document_index` handling active documents and automatically removing unindexed statuses (`noindex`, `metadata_only`, `inactive`, `removed`, `unsupported`); `remove_document_index` and `deactivate_document`.
+  - `consistency.py`: `verify_index_consistency` checking that every active document has exactly one row in both FTS tables, zero orphans exist, and internal FTS5 integrity passes.
+- Verification: 15 unit tests in `tests/unit/test_fts_index.py` covering term retrieval, title vs body BM25 weighting, upsert text replacement, removal, deactivation, status rules (`noindex`, `metadata_only`, `unsupported`), multilingual indexing (French accents, German umlauts, Chinese CJK, Thai, Arabic), rebuild reproducibility from snapshot, fts5vocab population, and detection of deliberate index corruption. 419 project tests passed with 88% overall coverage.
+Consequences: Query processing and CLI search (Step 11) can directly search the inverted index.
+
+
 
 
 
