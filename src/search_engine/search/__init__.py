@@ -34,6 +34,12 @@ from search_engine.search.service import (
     SearchResult,
     SearchService,
 )
+from search_engine.search.snippets import (
+    HighlightSegment,
+    extract_snippet,
+    highlight_text,
+    split_sentences,
+)
 from search_engine.search.suggest import (
     SpellingResult,
     load_vocab_terms,
@@ -43,6 +49,7 @@ from search_engine.search.suggest import (
 __all__ = [
     "DEFAULT_STOPWORDS",
     "GroupedDocument",
+    "HighlightSegment",
     "MAX_QUERY_LENGTH",
     "MAX_QUERY_TERMS",
     "MatchMode",
@@ -63,11 +70,14 @@ __all__ = [
     "compute_score",
     "compute_title_multiplier",
     "extract_host",
+    "extract_snippet",
     "group_and_paginate",
+    "highlight_text",
     "load_vocab_terms",
     "normalize_group_key",
     "normalize_query_text",
     "parse_query",
     "quote_for_fts5",
+    "split_sentences",
     "suggest_spelling",
 ]

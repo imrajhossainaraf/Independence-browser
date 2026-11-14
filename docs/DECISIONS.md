@@ -215,6 +215,28 @@ Decision:
   - 461 total project tests passing with 88% overall test coverage and sockets blocked.
 Consequences: Step 14 can now implement snippet generation, query highlighting, and answer synopses for Milestone M1.
 
+## ADR-023: Safe snippets, structured highlighting, and Milestone M1 (Step 14)
+
+Context: Step 14 completes Milestone M1 by delivering query-biased best-passage snippet extraction, text highlighting, and a reusable sentence splitter, strictly adhering to security invariant I-16 (no HTML strings emitted by backend).
+Decision:
+- Implemented `src/search_engine/search/snippets.py`:
+  - `HighlightSegment(text: str, is_match: bool)`: Structured data representation ensuring that HTML or malicious payload text (e.g. `<script>`, `<img src=x onerror=...>`) remains literal text and is never rendered as active HTML markup by the search API or backend.
+  - `split_sentences`: Reusable, robust sentence boundary tokenizer handling English abbreviations (`Dr.`, `e.g.`, `i.e.`, `vs.`, `U.S.`, `p.m.`), decimals (`3.14`), version strings (`v0.1.0`), and CJK sentence terminators (`。`, `！`, `？`). Reusable in Step 21 answer synopsis.
+  - `highlight_text`: Token-level matching that normalizes Unicode (NFKC) and strips diacritics while preserving original source text casing and characters.
+  - `extract_snippet`: Query-biased passage scoring based on distinct matched terms, match frequency, proximity span, and position bias. Selects up to two non-overlapping passages joined by an ellipsis segment. Length is strictly bounded with word-boundary awareness. Provides fallback to document description or first sentence, and an explicit metadata-only label (`Metadata only. No body text available.`) when body text is absent.
+- Integrated into `SearchService`:
+  - Enriches paged search results with `title_highlight` and `snippet` segment lists, and plain text property `snippet_text`.
+- Published Milestone M1 Quality Report in `docs/m1_quality_report.md`:
+  - Zero duplicate results in top 10 (target 0 met).
+  - Maximum results per host in top 10 <= 2 (target <= 2 met).
+  - Snippet term coverage: 100%.
+  - Zero socket leaks: 473 tests passing with `--disable-socket`.
+- Verification:
+  - 12 unit tests in `tests/unit/test_snippets.py` covering matching terms, bounded length, XSS payload neutralization, fallback snippets, CJK and accented text, long document scalability, metadata-only documents, determinism, and sentence splitting on abbreviations, initials, decimals, and lists.
+  - 473 total project tests passing with 89% overall test coverage.
+Consequences: Phase C (Content and Search) is fully verified and Milestone M1 is achieved. The engine is ready for Phase D (Crawler Pipeline & News Ingestion, Steps 15-18).
+
+
 
 
 

@@ -153,6 +153,14 @@ def _search(args: argparse.Namespace) -> int:
         print(json.dumps(response.to_dict(), indent=2))
         return 0
 
+    if response.is_auto_corrected and response.original_query:
+        print(
+            f"Showing results for: {response.query!r} "
+            f"(search instead for: {response.original_query!r})"
+        )
+    elif response.suggestion:
+        print(f"Did you mean: {response.suggestion}?")
+
     print(
         f"Search results for: {response.normalized_query!r} "
         f"(mode: {response.match_mode}, found: {len(response.results)})"
@@ -166,7 +174,9 @@ def _search(args: argparse.Namespace) -> int:
         print(f"[{i}] {r.title}")
         print(f"    URL:   {r.url}")
         print(f"    Type:  {r.doc_type} | Lang: {r.lang} | Score: {r.score:.3f}")
-        if r.description:
+        if r.snippet_text:
+            print(f"    Snip:  {r.snippet_text}")
+        elif r.description:
             print(f"    Desc:  {r.description}")
         print()
     return 0

@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import re
 import sqlite3
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
+from search_engine.indexer import decompress_text
 from search_engine.indexer.fts import (
     DEFAULT_BM25_WEIGHTS,
     DEFAULT_TRI_WEIGHTS,
@@ -28,12 +30,18 @@ from search_engine.search.ranking import (
     ScoreExplanation,
     compute_score,
 )
+from search_engine.search.snippets import (
+    HighlightSegment,
+    extract_snippet,
+    highlight_text,
+)
 from search_engine.search.suggest import (
     load_vocab_terms,
     suggest_spelling,
 )
 
 CANDIDATE_POOL_SIZE: int = 200
+_WORD_BOUNDARY_RE = re.compile(r"\b\w+\b", re.UNICODE)
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,6 +60,12 @@ class SearchResult:
     host: str = ""
     duplicate_count: int = 1
     score_explanation: ScoreExplanation | None = None
+    title_highlight: list[HighlightSegment] = field(default_factory=list)
+    snippet: list[HighlightSegment] = field(default_factory=list)
+
+    @property
+    def snippet_text(self) -> str:
+        return "".join(s.text for s in self.snippet)
 
     def to_dict(self) -> dict[str, Any]:
         data: dict[str, Any] = {
@@ -66,6 +80,9 @@ class SearchResult:
             "published_at": self.published_at,
             "host": self.host,
             "duplicate_count": self.duplicate_count,
+            "title_highlight": [s.to_dict() for s in self.title_highlight],
+            "snippet": [s.to_dict() for s in self.snippet],
+            "snippet_text": self.snippet_text,
         }
         if self.score_explanation:
             data["score_explanation"] = self.score_explanation.to_dict()
@@ -305,27 +322,60 @@ class SearchService:
             enable_host_diversity=config.enable_host_diversity,
         )
 
-        results = [
-            SearchResult(
-                doc_id=g.doc_id,
-                title=g.title,
-                url=g.url,
-                score=g.score,
-                doc_type=g.doc_type,
-                lang=g.lang,
-                description=g.description,
-                word_count=g.word_count,
-                published_at=g.published_at,
-                canonical_url=g.canonical_url,
-                content_hash=g.content_hash,
-                host=g.host,
-                duplicate_count=g.duplicate_count,
-                score_explanation=g.score_explanation,
+        # 7. Fetch stored text to generate safe query-biased snippets and title highlights
+        doc_ids = [g.doc_id for g in paged_groups]
+        doc_text_map: dict[int, tuple[str | None, str]] = {}
+        if doc_ids:
+            placeholders = ",".join("?" for _ in doc_ids)
+            cur = self._conn.cursor()
+            cur.execute(
+                f"SELECT id, text_gz, status FROM documents WHERE id IN ({placeholders})",  # noqa: S608
+                tuple(doc_ids),
             )
-            for g in paged_groups
-        ]
+            for r in cur.fetchall():
+                did = int(r["id"])
+                gz_blob = r["text_gz"]
+                status_val = str(r["status"])
+                raw_text = decompress_text(gz_blob) if gz_blob else None
+                doc_text_map[did] = (raw_text, status_val)
 
-        # 7. Check for did-you-mean suggestion when results are not already solid
+        query_tokens = _WORD_BOUNDARY_RE.findall(parsed.normalized_query)
+
+        results: list[SearchResult] = []
+        for g in paged_groups:
+            body_text, status_val = doc_text_map.get(g.doc_id, (None, "active"))
+            is_meta = status_val == "metadata_only"
+            snippet_segs = extract_snippet(
+                body_text,
+                parsed.normalized_query,
+                title=g.title,
+                description=g.description,
+                is_metadata_only=is_meta,
+            )
+            title_segs = highlight_text(g.title, query_tokens)
+
+            results.append(
+                SearchResult(
+                    doc_id=g.doc_id,
+                    title=g.title,
+                    url=g.url,
+                    score=g.score,
+                    doc_type=g.doc_type,
+                    lang=g.lang,
+                    description=g.description,
+                    word_count=g.word_count,
+                    published_at=g.published_at,
+                    canonical_url=g.canonical_url,
+                    content_hash=g.content_hash,
+                    host=g.host,
+                    duplicate_count=g.duplicate_count,
+                    score_explanation=g.score_explanation,
+                    title_highlight=title_segs,
+                    snippet=snippet_segs,
+                )
+            )
+
+        # 8. Check for did-you-mean suggestion when results are not already solid
         suggestion: str | None = None
         if auto_correct_depth == 0:
             if self._vocab is None:
