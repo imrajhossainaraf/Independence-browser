@@ -431,7 +431,16 @@ class NewsPoller:
                 report.items_expired = expired
                 report.items_cap_pruned = cap_pruned
 
-                # 7. Verify index consistency
+                # 7. Record poller metrics
+                conn.execute(
+                    """
+                    INSERT INTO metrics (at, name, value, labels)
+                    VALUES (?, 'news_items_added', ?, ?)
+                    """,
+                    (now_iso, float(report.items_added), f"sources_{report.sources_polled}"),
+                )
+
+                # 8. Verify index consistency
                 verify_index_consistency(conn)
 
         finally:

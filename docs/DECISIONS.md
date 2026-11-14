@@ -609,6 +609,48 @@ Verification:
 - Tested retention purge deactivating expired news and enforcing count caps.
 - Tested CLI invocations for all operator commands with JSON and text outputs.
 
+## ADR-034: Metrics Collection and Diagnostic Reporting (Step 26)
+
+Context:
+Step 26 requires that performance, freshness, failures, and resource usage are measurable and verifiable across the entire engine without introducing a second reporting module:
+- Crawl metrics: URLs discovered, requests attempted/completed, robots blocks, documents stored/indexed, duplicates detected, HTTP errors by class, parser/adapter errors, crawl duration/throughput, bytes downloaded, storage used, index size.
+- News metrics: items per source, clusters count, feed failures, newest item age per source.
+- Image metrics: stored thumbnails, rejected count by reason, storage bytes used.
+- Entity metrics: total entities count and oldest retrieval timestamp.
+- Index metrics: indexed documents, FTS index rows, database file size, index version, last rebuild timestamp.
+- Serving metrics: search and home latency percentiles (p50, p95, p99 via linear interpolation), results per query, empty-result rate, panel shown versus null rates, resident memory (RSS via psutil).
+- Persistence: metrics persist across restarts in the SQLite `metrics` table.
+- Subcommand: `search-engine report [crawl|news|index|search|all] [--json] [--db <path>]`.
+
+Decisions:
+1. Extended Reporting Module:
+   - Built on `src/search_engine/reporting/` (single module family): added `src/search_engine/reporting/metrics.py` and exported all structures from `src/search_engine/reporting/__init__.py`.
+   - `compute_percentile(values, percentile)`: implements standard linear interpolation matching numpy/statistics percentiles.
+   - `record_metric(db, name, value, labels, at)` and `record_metrics_batch(db, items, at)`: transactional inserts into SQLite `metrics` table.
+2. Domain Metric Gatherers:
+   - `gather_crawl_metrics`: compiles URL states, document statuses, HTTP failure event breakdowns, throughput, and disk footprints.
+   - `gather_news_metrics`: aggregates active news counts grouped by source, calculates newest item age per source, clusters, and feed consecutive failure tallies.
+   - `gather_image_metrics`: tallies active image thumbnails, storage sizes, and rejections grouped by reason.
+   - `gather_entity_metrics`: queries total entity count and oldest retrieval timestamp.
+   - `gather_index_metrics`: queries indexed document count, `doc_fts` rows, file size, version, and `last_rebuild_at` from `index_state`.
+   - `gather_serving_metrics`: computes p50/p95/p99 search & home latencies, avg results per query, empty result rate, panel shown rate, and memory RSS via `psutil.Process().memory_info().rss`.
+   - `gather_all_metrics`: compiles unified `FullEngineReport` with system virtual memory.
+3. Pipeline & Operational Telemetry:
+   - Crawler pipeline (`pipeline.py`) records duration and bytes downloaded on run completion.
+   - News poller (`news.py`) records added items and source poll metrics.
+   - Index rebuilder (`build.py`) records rebuild duration and indexed document count.
+   - CLI search (`cli.py`) records query latency, result count, and panel presence.
+4. Operator CLI:
+   - `search-engine report [crawl|news|index|search|all] [--json] [--db <path>]` provides clean human-readable and structured JSON diagnostic reports.
+
+Verification:
+- 5 comprehensive unit tests in `tests/unit/test_metrics_reports.py`.
+- Tested exact percentile calculations (empty, single, two-element, uniform 1..100 distribution, boundary clamping).
+- Tested metrics persistence across database restart.
+- Tested zero-data behavior across all gatherers and report renderers.
+- Tested fixture-populated metrics reflecting failure events, HTTP errors, feed failures, image rejections, and latency distributions.
+- Tested CLI `report` subcommands across all categories in both text and JSON formats.
+
 
 
 

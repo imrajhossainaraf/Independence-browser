@@ -203,6 +203,22 @@ def rebuild_index(conn: sqlite3.Connection, *, run_id: str | None = None) -> Ind
     elapsed = time.perf_counter() - t0
     report.finish()
     report.duration_seconds = max(report.duration_seconds, elapsed)
+
+    conn.execute(
+        """
+        INSERT INTO metrics (at, name, value, labels)
+        VALUES (?, 'index_rebuild_duration_seconds', ?, ?)
+        """,
+        (_utc_now_iso(), elapsed, report.run_id),
+    )
+    conn.execute(
+        """
+        INSERT INTO metrics (at, name, value, labels)
+        VALUES (?, 'index_documents_indexed', ?, ?)
+        """,
+        (_utc_now_iso(), float(report.indexed_count), report.run_id),
+    )
+
     return report
 
 

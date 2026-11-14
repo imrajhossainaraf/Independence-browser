@@ -339,6 +339,18 @@ class CrawlPipeline:
             )
 
         duration = self._clock() - t0
+        try:
+            with self.db.transaction() as m_conn:
+                m_conn.execute(
+                    """
+                    INSERT INTO metrics (at, name, value, labels)
+                    VALUES (?, 'crawl_duration_seconds', ?, ?)
+                    """,
+                    (datetime.now(UTC).isoformat(), duration, run_id),
+                )
+        except Exception as exc:
+            logger.debug("Could not record crawl metrics: %s", exc)
+
         return PipelineResult(
             run_id=run_id,
             status=status,

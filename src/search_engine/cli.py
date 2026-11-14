@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import platform
 import sys
+import time
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +18,8 @@ from search_engine.config import describe, field_sources, load_settings
 from search_engine.db import Database
 from search_engine.errors import ConfigError, PolicyDenied, StorageError
 from search_engine.search import SearchService
+
+logger = logging.getLogger(__name__)
 
 
 def health() -> dict[str, str]:
@@ -288,6 +293,20 @@ def build_parser() -> argparse.ArgumentParser:
     purge_p.add_argument("--db", type=Path, default=None, help="database path")
     purge_p.add_argument("--json", action="store_true", help="output as JSON")
 
+    # Diagnostic reporting (Step 26)
+    report_p = subparsers.add_parser(
+        "report", help="display diagnostic reports (crawl, news, index, search, all)"
+    )
+    report_p.add_argument(
+        "kind",
+        nargs="?",
+        default="all",
+        choices=["crawl", "news", "index", "search", "all"],
+        help="kind of diagnostic report to display (default: all)",
+    )
+    report_p.add_argument("--json", action="store_true", help="output as JSON")
+    report_p.add_argument("--db", type=Path, default=None, help="database path")
+
     return parser
 
 
@@ -329,14 +348,43 @@ def _search(args: argparse.Namespace) -> int:
             print(f"error: database not found at {db_path}", file=sys.stderr)
         return 1
 
-    with Database(db_path) as db, db.reader() as conn:
-        service = SearchService(conn)
-        response = service.search(
-            args.query,
-            limit=args.limit,
-            doc_type=args.doc_type,
-            lang=args.lang,
-        )
+    t0 = time.perf_counter()
+    with Database(db_path) as db:
+        with db.reader() as conn:
+            service = SearchService(conn)
+            response = service.search(
+                args.query,
+                limit=args.limit,
+                doc_type=args.doc_type,
+                lang=args.lang,
+            )
+        elapsed_ms = (time.perf_counter() - t0) * 1000.0
+        try:
+            with db.transaction() as m_conn:
+                now_iso = datetime.now(UTC).isoformat()
+                m_conn.execute(
+                    """
+                    INSERT INTO metrics (at, name, value, labels)
+                    VALUES (?, 'search_latency_ms', ?, '')
+                    """,
+                    (now_iso, elapsed_ms),
+                )
+                m_conn.execute(
+                    """
+                    INSERT INTO metrics (at, name, value, labels)
+                    VALUES (?, 'search_results_count', ?, '')
+                    """,
+                    (now_iso, float(len(response.results))),
+                )
+                m_conn.execute(
+                    """
+                    INSERT INTO metrics (at, name, value, labels)
+                    VALUES (?, 'search_panel_shown', ?, '')
+                    """,
+                    (now_iso, 1.0 if (response.panel or response.synopsis) else 0.0),
+                )
+        except Exception as exc:
+            logger.debug("Failed to record CLI search metrics: %s", exc)
 
     if args.json:
         print(json.dumps(response.to_dict(), indent=2))
@@ -935,6 +983,43 @@ def _retain(args: argparse.Namespace) -> int:
     return 2
 
 
+def _report(args: argparse.Namespace) -> int:
+    from search_engine.reporting.metrics import (
+        gather_all_metrics,
+        gather_crawl_metrics,
+        gather_index_metrics,
+        gather_news_metrics,
+        gather_serving_metrics,
+    )
+
+    overrides = _parse_overrides(args.overrides)
+    if args.db:
+        overrides["db_path"] = str(args.db)
+    settings = load_settings(args.config_file, overrides)
+    db = Database(Path(settings.db_path)).open()
+    try:
+        kind = getattr(args, "kind", "all") or "all"
+        rep: Any
+        if kind == "crawl":
+            rep = gather_crawl_metrics(db, settings)
+        elif kind == "news":
+            rep = gather_news_metrics(db)
+        elif kind == "index":
+            rep = gather_index_metrics(db, settings)
+        elif kind == "search":
+            rep = gather_serving_metrics(db)
+        else:
+            rep = gather_all_metrics(db, settings)
+
+        if args.json:
+            print(json.dumps(rep.to_dict(), indent=2))
+        else:
+            print(rep.render())
+        return 0
+    finally:
+        db.close()
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
@@ -985,6 +1070,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _status(args)
         if args.command == "retain":
             return _retain(args)
+        if args.command == "report":
+            return _report(args)
     except ConfigError as exc:
         print(f"error [{exc.code}]: {exc.message}", file=sys.stderr)
         return 3
