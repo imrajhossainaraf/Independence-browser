@@ -61,5 +61,16 @@ No cookies are sent or stored (invariant I-7).
 `Scheduler.approve_robots(origin)` issues a single-use `RobotsFetchApproval` bound to the host's own `/robots.txt`, skipping only the robots rule check. Up to 5 redirect hops are supported, provided each target stays on an allowlisted host.
 Politeness delays and exponential backoff with jitter on retryable failures are tracked and updated via `Scheduler.release()`.
 
+## ADR-014: Spike S5 result, text extraction bake-off is GO (Spike S5)
+
+Context: Step 8 requires deterministic, searchable text extraction from HTML without boilerplate leakage (nav, headers, footers, cookie banners, advertisements). We need to determine the primary and fallback extraction strategy across diverse web pages (articles, documentation, blogs, forums, product pages, wikis).
+Decision: GO. Adopt a combined extraction pipeline with `trafilatura` (2.3.1, Apache-2.0) as the primary extractor and `selectolax` (Lexbor backend, MIT) as fallback when the extracted token count is below 40 tokens and the fallback yields more content.
+Evaluation: Evaluated across 20 diverse HTML fixtures in `spikes/s5_extraction/fixtures/` with hand-crafted gold text:
+- Combined average token F1: 0.993 (requirement >= 0.90)
+- Combined minimum token F1: 0.953 (requirement >= 0.80)
+- Boilerplate leakage rate: 0.0% (no cookie notices, nav links, footers, or ads leaked into gold output)
+Dependencies: `trafilatura` (Apache-2.0), `selectolax` (MIT), `charset-normalizer` (MIT), and `python-dateutil` (BSD-3-Clause) added per Section 4 list.
+Consequences: Step 8 will use this hybrid strategy in `src/search_engine/extract/html.py`.
+
 
 

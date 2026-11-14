@@ -1,0 +1,5 @@
+Senior Distributed Systems Engineer
+We are seeking an experienced systems engineer to architect resilient indexing pipelines and high-throughput transaction stores.
+Responsibilities and Role Overview
+You will design fault-tolerant consensus algorithms, optimize storage representations, and implement deterministic simulation testing frameworks.
+Ideal candidates demonstrate deep familiarity with modern systems languages, concurrency primitives, and asynchronous operating system interfaces.

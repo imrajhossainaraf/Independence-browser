@@ -1,0 +1,4 @@
+Adoption of Next-Generation Geospatial Metadata Standard
+The International Geospatial Consortium has formally ratified version 3.0 of the open vector coordinate reference standard.
+The updated specification standardizes binary encoding for time-variant topological surfaces and introduces native support for centimeter-accurate satellite positioning coordinates.
+Global open-source mapping software suites will deploy conforming parsers across their upcoming maintenance release cycles to ensure interoperability.

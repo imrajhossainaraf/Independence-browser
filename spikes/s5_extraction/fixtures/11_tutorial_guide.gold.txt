@@ -1,0 +1,6 @@
+Configuring Modern Linux Firewalls with NFTables
+NFTables succeeds iptables as the standard packet classification framework within modern Linux kernels, offering unified syntax and enhanced filtering efficiency.
+Step 1: Establishing Default Drop Rules
+Begin by defining an inet table with inbound and forward chains set to drop incoming packets by default to establish a secure perimeter.
+Step 2: Permitting Loopback and Established Sockets
+Explicitly permit loopback traffic and establish stateful inspection rules allowing packets associated with existing and related network connections.

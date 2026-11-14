@@ -1,0 +1,5 @@
+Atmospheric Optics
+Atmospheric optics examines how electromagnetic radiation interacts with the gases, aerosols, and hydrometeors present in planetary atmospheres.
+Scattering Phenomena
+Rayleigh scattering by molecules much smaller than the wavelength of light accounts for the blue hue of the daytime sky and the vivid red shades observed at twilight.
+Mie scattering occurs when particles have dimensions comparable to or larger than the light wavelength, creating optical phenomena such as halos, coronas, and atmospheric glory.

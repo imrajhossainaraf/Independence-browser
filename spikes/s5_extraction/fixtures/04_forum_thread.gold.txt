@@ -1,0 +1,4 @@
+Optimal SSD filesystem options for SQLite WAL
+When running intensive SQLite write transactions with write-ahead logging enabled on modern NVMe drives, filesystem selection plays a measurable role in durability guarantees.
+Using standard NTFS or ext4 with default allocation unit sizes provides the most consistent fsync performance and avoids excessive write amplification.
+Ensure that directory syncing is avoided when not supported by the underlying platform to prevent unexpected permission errors or latency spikes.

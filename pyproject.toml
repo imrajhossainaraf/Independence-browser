@@ -11,11 +11,15 @@ requires-python = ">=3.12"
 license = { text = "Proprietary" }
 # Runtime dependencies are added step by step, each with an ADR in docs/DECISIONS.md.
 dependencies = [
+    "charset-normalizer>=3.5.2",
     "httpx>=0.28.1",
     "protego>=0.7.0",
     "pydantic>=2.14.2",
     "pydantic-settings>=2.16.2",
+    "python-dateutil>=4.0.0",
+    "selectolax>=1.0.2",
     "tldextract>=5.4.0",
+    "trafilatura>=2.3.1",
 ]
 
 [project.scripts]
@@ -50,7 +54,7 @@ select = ["E", "F", "I", "B", "UP", "S", "PT"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S104", "PT018"]
-"spikes/**" = ["S101", "S104", "PT018"]
+"spikes/**" = ["S101", "S104", "PT018", "E501"]
 "scripts/run_check.py" = ["S603"]
 
 [tool.mypy]

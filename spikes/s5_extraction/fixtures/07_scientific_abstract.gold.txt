@@ -1,0 +1,5 @@
+Microstructural Evolution in High-Entropy Alloys Under High Strain Rates
+Abstract
+We investigate the mechanical response and dislocation patterning in face-centered cubic high-entropy alloys subjected to dynamic impact loading at strain rates exceeding 1000 per second.
+Transmission electron microscopy revealed widespread nanotwinning accompanied by localized shear banding, contributing to an exceptional combination of tensile strength and fracture toughness.
+These findings provide mechanistic guidelines for designing damage-tolerant structural components intended for extreme cryogenic and aerospace environments.

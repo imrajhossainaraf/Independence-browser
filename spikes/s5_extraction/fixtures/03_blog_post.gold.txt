@@ -1,0 +1,4 @@
+Why We Rewrote Our Pipeline in Python
+Over the past three years our data processing pipeline grew increasingly rigid and difficult to maintain across distributed clusters.
+Migrating to modern Python 3.12 with async workers allowed us to eliminate thousands of lines of boilerplate code while drastically accelerating development velocity.
+Our benchmark measurements revealed that overall throughput actually improved by fifteen percent due to streamlined serialization and reduced memory fragmentation.
