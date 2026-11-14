@@ -10,7 +10,7 @@ Release A (v0.1.0). Steps 19, 20, 28 are Release B and skipped.
 | 2 | Config, logging, reporting | done | step-02 | 86 tests, 98% cov; ceilings, redaction, report tests pass |
 | 3 | URL normalization and safety | done | step-03 | 265 tests, 98% cov; every D1/D2 rule has a table row; hypothesis fuzz and idempotence pass |
 | 4 | SQLite schema and storage | done | step-04 | 295 tests, 97% coverage |
-| 5 | Network safety, fixture server | todo | | |
+| 5 | Network safety, fixture server | done | step-05 | 320 tests, 97% coverage; resolver, transport, IP gate, fixture server |
 | 6 | SafeFetcher | todo | | |
 | 7 | Robots and scheduler | todo | | |
 | 8 | HTML extraction | todo | | |

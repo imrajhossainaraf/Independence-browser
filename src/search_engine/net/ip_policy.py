@@ -7,6 +7,9 @@ from __future__ import annotations
 
 import ipaddress
 import re
+from collections.abc import Sequence
+
+from search_engine.net.errors import InvalidAddressError
 
 IPAddress = ipaddress.IPv4Address | ipaddress.IPv6Address
 
@@ -84,4 +87,36 @@ def is_public_ip(ip: IPAddress) -> bool:
 
 
 def is_loopback_ip(ip: IPAddress) -> bool:
+    if isinstance(ip, ipaddress.IPv6Address):
+        if ip.ipv4_mapped is not None:
+            return False
+        return ip == ipaddress.IPv6Address("::1")
     return ip.is_loopback
+
+
+def is_allowed_ip(ip: IPAddress, *, allow_loopback: bool = False) -> bool:
+    """True if the address is public, or loopback when explicitly permitted for tests."""
+    if is_public_ip(ip):
+        return True
+    if allow_loopback and is_loopback_ip(ip):
+        return True
+    return False
+
+
+def validate_resolved_ips(
+    ips: Sequence[IPAddress], *, allow_loopback: bool = False
+) -> list[IPAddress]:
+    """Validate that all resolved addresses satisfy the IP policy.
+
+    A host is rejected if any of its addresses is private/non-public,
+    or if it resolves to loopback when allow_loopback is False.
+    """
+    if not ips:
+        raise InvalidAddressError("no IP addresses resolved for host", code="no_addresses")
+    for ip in ips:
+        if not is_allowed_ip(ip, allow_loopback=allow_loopback):
+            raise InvalidAddressError(
+                f"resolved address {ip} is not allowed (allow_loopback={allow_loopback})",
+                code="address_not_allowed",
+            )
+    return list(ips)

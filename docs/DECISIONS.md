@@ -32,3 +32,14 @@ Context: D1/D2 leave details open. Decisions: (1) tldextract 5.4 (BSD-3-Clause) 
 ## ADR-010: Storage layer (Step 4)
 
 Plain sqlite3 with one writer connection (BEGIN IMMEDIATE) and per-call read-only readers (WAL). Forward-only numbered .sql migrations, each in its own transaction, with an online backup before upgrading. Raw pages are stored as gzip at data/raw/ab/cd/<sha256>.gz and images at data/images/ab/cd/<sha256>-<size>.webp; paths come only from hashes. Writes go through a temp file, fsync and os.replace, retrying on Windows PermissionError. recover() reports orphan files and rows with missing files, and removes only interrupted temp files. Migrations ship inside the package, so they are included in the wheel and the Docker image.
+
+## ADR-011: Network safety layer and fixture server (Step 5)
+
+Outbound HTTP connections are strictly confined to `src/search_engine/net/` through a project-owned `Transport` protocol (`TransportRequest`, `TransportResponse`, `Transport`, `FakeTransport`).
+The production implementation `HttpxTransport` pins requests to pre-validated IP addresses using the URL format `https://<pinned_ip>:<port>/path` while setting the `Host` header and `sni_hostname` TLS extension to the original domain name.
+Connection reuse across hosts (the hazard discovered in ADR-006) is eliminated by configuring `max_keepalive_connections=0`, forcing a fresh TLS handshake per request.
+A safety gate inside `HttpxTransport.send` verifies that the target IP satisfies the IP policy immediately before opening any socket.
+`SystemResolver` returns all A and AAAA records with strict timeouts; `FakeResolver` supports deterministic testing and sequential DNS rebinding simulations.
+Hosts resolving to any non-public or mapped addresses are rejected.
+A scriptable HTTP/HTTPS `FixtureServer` on `127.0.0.1` provides coverage for normal pages, robots variants, redirect chains and loops, slow responses, huge payloads, gzip bombs, wrong content types, 429/500 errors, dropped sockets, RSS feeds with media enclosures, and valid/malformed images.
+
