@@ -37,10 +37,12 @@ if (Test-Path $VenvExe) {
     & $VenvExe @ArgsList
 } elseif (Test-Path $VenvPy) {
     & $VenvPy -m search_engine.cli @ArgsList
+} elseif (Get-Command uv -ErrorAction SilentlyContinue) {
+    & uv run search-engine @ArgsList
 } elseif (Get-Command poetry -ErrorAction SilentlyContinue) {
     & poetry run search-engine @ArgsList
 } else {
-    Write-Error "Neither .venv nor poetry found in $RepoRoot"
+    Write-Error "Neither .venv nor uv found in $RepoRoot"
     exit 1
 }
 

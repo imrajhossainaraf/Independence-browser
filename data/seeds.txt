@@ -1,0 +1,8 @@
+# Approved Seed URLs for Independent Search Engine
+# Format: one normalized HTTP/HTTPS URL per line
+# Comments start with #. Empty lines are ignored.
+# Only registered domains matching these seeds will be crawled (allowlist_mode=true).
+#
+# Examples (uncomment or add your approved domains):
+# https://docs.python.org/3/
+# https://developer.mozilla.org/en-US/

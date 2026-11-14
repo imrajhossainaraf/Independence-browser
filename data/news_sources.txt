@@ -1,5 +1,7 @@
 # Approved News Sources for Independent Search Engine
-# Format: feed_url, display_name, category, poll_interval_minutes, images_allowed (yes/no)
-# Note: poll_interval_minutes must be >= 15. Default is 30.
-# Example:
-# https://example.com/rss.xml, Example News, General, 30, no
+# Format: feed_url | display_name | category | poll_interval_minutes (optional, min 15, default 30) | images_allowed (optional, yes/no, default no)
+# Comments start with #. Empty lines are ignored.
+#
+# Examples (uncomment or add your approved feeds):
+# https://feeds.bbci.co.uk/news/rss.xml | BBC News | world | 30 | no
+# https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml | New York Times | general | 30 | no
