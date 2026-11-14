@@ -43,3 +43,14 @@ A safety gate inside `HttpxTransport.send` verifies that the target IP satisfies
 Hosts resolving to any non-public or mapped addresses are rejected.
 A scriptable HTTP/HTTPS `FixtureServer` on `127.0.0.1` provides coverage for normal pages, robots variants, redirect chains and loops, slow responses, huge payloads, gzip bombs, wrong content types, 429/500 errors, dropped sockets, RSS feeds with media enclosures, and valid/malformed images.
 
+## ADR-012: Safe HTTP Fetcher (Step 6)
+
+`SafeFetcher` (`src/search_engine/crawler/fetcher.py`) acts as the single network choke point (invariant I-1) for crawler traffic, delegating to the project-owned `Transport` interface without directly importing `httpx`.
+Fetching is protected by unforgeable, single-use approval capabilities (`FetchApproval` and `RobotsFetchApproval`) created only through sentinel-guarded scheduler factories; attempts to reuse, forge, or cross-call approvals fail immediately.
+Automatic redirects are disabled; redirects are returned as `Redirect` records for re-submission through the scheduler and approval pipeline, with a bounded `follow` helper capping hops at 5.
+Responses are streamed under strict byte limits (D9) and timeouts, preventing gzip bombs and oversized payloads.
+Payloads are checked against Content-Type allowlists and scanned via magic-byte sniffing (`sniff_content`) to strictly reject executables (DOS/PE, ELF, Mach-O, Java), SVG images (invariant I-5), animated GIFs, archives, and mislabeled binary formats.
+Status codes are classified into `success`, `retryable` (408, 425, 429, 5xx, network drops, timeouts), and `permanent` (4xx). Rate limits (429) extract `Retry-After` capped at `max_crawl_delay_seconds`.
+No cookies are sent or stored (invariant I-7).
+
+

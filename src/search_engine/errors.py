@@ -23,6 +23,30 @@ class FetchError(EngineError):
     code = "fetch_error"
 
 
+class InvalidApproval(PolicyDenied):
+    code = "invalid_approval"
+
+
+class RedirectLimitExceeded(FetchError):
+    code = "too_many_redirects"
+
+
+class ResponseTooLargeError(FetchError):
+    code = "response_too_large"
+
+
+class MimeTypeDisallowed(FetchError):
+    code = "mime_type_disallowed"
+
+
+class PayloadRejected(FetchError):
+    code = "payload_rejected"
+
+
+class StorageLimitExceeded(FetchError):
+    code = "storage_limit_exceeded"
+
+
 class ExtractionError(EngineError):
     code = "extraction_error"
 
