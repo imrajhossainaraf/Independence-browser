@@ -155,6 +155,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     poll_parser.add_argument("--json", action="store_true", help="machine-readable JSON output")
 
+    dis_src = news_sub.add_parser("disable-source", help="disable a news feed source")
+    dis_src.add_argument("source", help="feed URL, key, or display name")
+    dis_src.add_argument("--db", type=Path, default=None, help="database path")
+
+    rem_it = news_sub.add_parser("remove-item", help="remove a news item from search and home")
+    rem_it.add_argument("id", help="news item id")
+    rem_it.add_argument("--reason", default="operator_removal", help="removal reason")
+    rem_it.add_argument("--db", type=Path, default=None, help="database path")
+
     serve_parser = subparsers.add_parser("serve", help="start read-only HTTP API server")
     serve_parser.add_argument("--host", default=None, help="host to bind (default: 127.0.0.1)")
     serve_parser.add_argument("--port", type=int, default=None, help="port to bind (default: 8000)")
@@ -216,6 +225,68 @@ def build_parser() -> argparse.ArgumentParser:
         help="empty target directory to restore into",
     )
     restore_parser.add_argument("--json", action="store_true", help="output restore report as JSON")
+
+    # Operator controls (Step 25)
+    block_p = subparsers.add_parser("block", help="block a host, domain, or prefix")
+    block_p.add_argument("kind", choices=["host", "domain", "prefix"])
+    block_p.add_argument("target", help="target host, domain, or prefix to block")
+    block_p.add_argument("--reason", default="operator_block", help="reason for block")
+    block_p.add_argument("--db", type=Path, default=None, help="database path")
+
+    unblock_p = subparsers.add_parser("unblock", help="unblock a host, domain, or prefix")
+    unblock_p.add_argument("kind", choices=["host", "domain", "prefix"])
+    unblock_p.add_argument("target", help="target host, domain, or prefix to unblock")
+    unblock_p.add_argument("--db", type=Path, default=None, help="database path")
+
+    blocks_p = subparsers.add_parser("blocks", help="list active operator blocks")
+    blocks_p.add_argument("--json", action="store_true", help="output as JSON")
+    blocks_p.add_argument("--db", type=Path, default=None, help="database path")
+
+    remove_p = subparsers.add_parser("remove", help="remove document by url or domain")
+    remove_p.add_argument("--url", default=None, help="exact URL to remove")
+    remove_p.add_argument("--domain", default=None, help="registered domain to remove")
+    remove_p.add_argument(
+        "--purge-raw", action="store_true", help="purge unreferenced raw files from disk"
+    )
+    remove_p.add_argument("--reason", default="operator_removal", help="removal reason")
+    remove_p.add_argument("--db", type=Path, default=None, help="database path")
+    remove_p.add_argument("--json", action="store_true", help="output as JSON")
+
+    images_p = subparsers.add_parser("images", help="image operations")
+    images_sub = images_p.add_subparsers(dest="images_command", required=True)
+    takedown_p = images_sub.add_parser("takedown", help="takedown an image and delete files")
+    takedown_p.add_argument("id", help="image id")
+    takedown_p.add_argument("--reason", default="operator_takedown", help="reason")
+    takedown_p.add_argument("--db", type=Path, default=None, help="database path")
+
+    entities_p = subparsers.add_parser("entities", help="entity operations")
+    entities_sub = entities_p.add_subparsers(dest="entities_command", required=True)
+    ent_rem = entities_sub.add_parser("remove", help="remove an entity")
+    ent_rem.add_argument("id", help="entity id or name")
+    ent_rem.add_argument("--db", type=Path, default=None, help="database path")
+
+    pause_p = subparsers.add_parser("pause", help="pause the crawler via PAUSE file")
+    pause_p.add_argument("--data-dir", type=Path, default=None, help="data directory")
+
+    resume_p = subparsers.add_parser("resume", help="resume the crawler by removing PAUSE file")
+    resume_p.add_argument("--data-dir", type=Path, default=None, help="data directory")
+
+    stop_p = subparsers.add_parser("stop", help="stop the crawler gracefully via STOP file")
+    stop_p.add_argument("--data-dir", type=Path, default=None, help="data directory")
+
+    status_p = subparsers.add_parser("status", help="show operational engine and lock status")
+    status_p.add_argument("--json", action="store_true", help="output as JSON")
+    status_p.add_argument("--db", type=Path, default=None, help="database path")
+
+    retain_p = subparsers.add_parser("retain", help="manage data retention")
+    retain_sub = retain_p.add_subparsers(dest="retain_command", required=True)
+    purge_p = retain_sub.add_parser("purge", help="enforce retention and prune expired data")
+    purge_p.add_argument("--days", type=int, default=14, help="news retention days (default: 14)")
+    purge_p.add_argument(
+        "--cap", type=int, default=500, help="max active news items (default: 500)"
+    )
+    purge_p.add_argument("--db", type=Path, default=None, help="database path")
+    purge_p.add_argument("--json", action="store_true", help="output as JSON")
 
     return parser
 
@@ -391,6 +462,43 @@ def _news(args: argparse.Namespace) -> int:
         if report.sources_failed > 0 and report.sources_success == 0 and report.sources_polled > 0:
             return 1
         return 0
+
+    if args.news_command == "disable-source":
+        from search_engine.operations.controls import disable_news_source
+
+        overrides = _parse_overrides(args.overrides)
+        if args.db:
+            overrides["db_path"] = str(args.db)
+        settings = load_settings(args.config_file, overrides)
+        db = Database(Path(settings.db_path)).open()
+        try:
+            ok = disable_news_source(db, args.source)
+            if ok:
+                print(f"News source '{args.source}' disabled and items deactivated.")
+                return 0
+            print(f"News source '{args.source}' not found.", file=sys.stderr)
+            return 1
+        finally:
+            db.close()
+
+    if args.news_command == "remove-item":
+        from search_engine.operations.controls import remove_news_item
+
+        overrides = _parse_overrides(args.overrides)
+        if args.db:
+            overrides["db_path"] = str(args.db)
+        settings = load_settings(args.config_file, overrides)
+        db = Database(Path(settings.db_path)).open()
+        try:
+            ok = remove_news_item(db, args.id, reason=args.reason)
+            if ok:
+                print(f"News item '{args.id}' removed.")
+                return 0
+            print(f"News item '{args.id}' not found.", file=sys.stderr)
+            return 1
+        finally:
+            db.close()
+
     return 2
 
 
@@ -587,6 +695,246 @@ def _restore(args: argparse.Namespace) -> int:
     return 0
 
 
+def _block(args: argparse.Namespace) -> int:
+    from search_engine.operations.controls import block_target
+
+    overrides = _parse_overrides(args.overrides)
+    if args.db:
+        overrides["db_path"] = str(args.db)
+    settings = load_settings(args.config_file, overrides)
+    db = Database(Path(settings.db_path)).open()
+    try:
+        rec = block_target(db, args.target, args.kind, reason=args.reason)
+        print(f"Blocked {rec.kind}: {rec.target} (ID: {rec.id})")
+        return 0
+    finally:
+        db.close()
+
+
+def _unblock(args: argparse.Namespace) -> int:
+    from search_engine.operations.controls import unblock_target
+
+    overrides = _parse_overrides(args.overrides)
+    if args.db:
+        overrides["db_path"] = str(args.db)
+    settings = load_settings(args.config_file, overrides)
+    db = Database(Path(settings.db_path)).open()
+    try:
+        ok = unblock_target(db, args.target, args.kind)
+        if ok:
+            print(f"Unblocked {args.kind}: {args.target}")
+            return 0
+        print(f"Target '{args.target}' was not found in blocks.", file=sys.stderr)
+        return 1
+    finally:
+        db.close()
+
+
+def _blocks(args: argparse.Namespace) -> int:
+    from search_engine.operations.controls import list_blocks
+
+    overrides = _parse_overrides(args.overrides)
+    if args.db:
+        overrides["db_path"] = str(args.db)
+    settings = load_settings(args.config_file, overrides)
+    db = Database(Path(settings.db_path)).open()
+    try:
+        recs = list_blocks(db)
+        if args.json:
+            print(json.dumps([r.to_dict() for r in recs], indent=2))
+        else:
+            if not recs:
+                print("No active operator blocks.")
+            else:
+                for r in recs:
+                    print(
+                        f"[{r.kind.upper()}] {r.target} "
+                        f"(reason: {r.reason}, created: {r.created_at})"
+                    )
+        return 0
+    finally:
+        db.close()
+
+
+def _remove(args: argparse.Namespace) -> int:
+    from search_engine.operations.controls import remove_document
+    from search_engine.storage import FileStore
+
+    overrides = _parse_overrides(args.overrides)
+    if args.db:
+        overrides["db_path"] = str(args.db)
+    settings = load_settings(args.config_file, overrides)
+    db = Database(Path(settings.db_path)).open()
+    store = FileStore(Path(settings.raw_dir).parent)
+    try:
+        rep = remove_document(
+            db,
+            store=store if args.purge_raw else None,
+            url=args.url,
+            domain=args.domain,
+            purge_raw=args.purge_raw,
+            reason=args.reason,
+        )
+        if args.json:
+            print(json.dumps(rep.to_dict(), indent=2))
+        else:
+            print(f"Removal complete for {rep.kind}: {rep.target}")
+            print(f"  URLs blocked:       {rep.urls_blocked}")
+            print(f"  Documents removed:  {rep.documents_removed}")
+            print(f"  FTS index cleaned:  {rep.fts_rows_deleted} rows")
+            if args.purge_raw:
+                print(f"  Raw files purged:   {rep.raw_files_purged}")
+        return 0
+    finally:
+        db.close()
+
+
+def _images(args: argparse.Namespace) -> int:
+    if args.images_command == "takedown":
+        from search_engine.operations.controls import takedown_image
+        from search_engine.storage import FileStore
+
+        overrides = _parse_overrides(args.overrides)
+        if args.db:
+            overrides["db_path"] = str(args.db)
+        settings = load_settings(args.config_file, overrides)
+        db = Database(Path(settings.db_path)).open()
+        store = FileStore(Path(settings.image_dir).parent)
+        try:
+            ok = takedown_image(db, store, args.id, reason=args.reason)
+            if ok:
+                print(f"Image '{args.id}' takedown completed (files deleted).")
+                return 0
+            print(f"Image '{args.id}' not found.", file=sys.stderr)
+            return 1
+        finally:
+            db.close()
+    return 2
+
+
+def _entities(args: argparse.Namespace) -> int:
+    if args.entities_command == "remove":
+        from search_engine.operations.controls import remove_entity
+
+        overrides = _parse_overrides(args.overrides)
+        if args.db:
+            overrides["db_path"] = str(args.db)
+        settings = load_settings(args.config_file, overrides)
+        db = Database(Path(settings.db_path)).open()
+        try:
+            ok = remove_entity(db, args.id)
+            if ok:
+                print(f"Entity '{args.id}' removed from store.")
+                return 0
+            print(f"Entity '{args.id}' not found.", file=sys.stderr)
+            return 1
+        finally:
+            db.close()
+    return 2
+
+
+def _pause(args: argparse.Namespace) -> int:
+    from search_engine.operations.controls import pause_crawler
+
+    overrides = _parse_overrides(args.overrides)
+    settings = load_settings(args.config_file, overrides)
+    data_dir = args.data_dir or Path(settings.db_path).parent.parent
+    p = pause_crawler(data_dir)
+    print(f"Crawl pause requested (flag created at {p}).")
+    return 0
+
+
+def _resume(args: argparse.Namespace) -> int:
+    from search_engine.operations.controls import resume_crawler
+
+    overrides = _parse_overrides(args.overrides)
+    settings = load_settings(args.config_file, overrides)
+    data_dir = args.data_dir or Path(settings.db_path).parent.parent
+    ok = resume_crawler(data_dir)
+    if ok:
+        print("Crawl resume requested (PAUSE file removed).")
+    else:
+        print("Crawler was not paused (no PAUSE file).")
+    return 0
+
+
+def _stop(args: argparse.Namespace) -> int:
+    from search_engine.operations.controls import stop_crawler
+
+    overrides = _parse_overrides(args.overrides)
+    settings = load_settings(args.config_file, overrides)
+    data_dir = args.data_dir or Path(settings.db_path).parent.parent
+    p = stop_crawler(data_dir)
+    print(f"Crawl stop requested (flag created at {p}).")
+    return 0
+
+
+def _status(args: argparse.Namespace) -> int:
+    from search_engine.operations.controls import check_engine_status
+
+    overrides = _parse_overrides(args.overrides)
+    if args.db:
+        overrides["db_path"] = str(args.db)
+    settings = load_settings(args.config_file, overrides)
+    db = Database(Path(settings.db_path)).open()
+    try:
+        rep = check_engine_status(settings, db)
+        if args.json:
+            print(json.dumps(rep.to_dict(), indent=2))
+        else:
+            print(f"Engine Status:      {rep.status.upper()}")
+            print(f"  Paused:           {rep.paused}")
+            print(f"  Stopped:          {rep.stopped}")
+            print(f"  Free Disk:        {rep.free_disk_bytes / (1024 * 1024):.1f} MB")
+            print(f"  Active Documents: {rep.active_documents}")
+            print(f"  Active News:      {rep.active_news_items}")
+            print(f"  Active Images:    {rep.active_images}")
+            print(f"  Operator Blocks:  {rep.active_blocks}")
+            if rep.warnings:
+                print("Warnings:")
+                for w in rep.warnings:
+                    print(f"  - {w}")
+        return 0
+    finally:
+        db.close()
+
+
+def _retain(args: argparse.Namespace) -> int:
+    if args.retain_command == "purge":
+        from search_engine.operations.retention import apply_retention_purge
+        from search_engine.storage import FileStore
+
+        overrides = _parse_overrides(args.overrides)
+        if args.db:
+            overrides["db_path"] = str(args.db)
+        settings = load_settings(args.config_file, overrides)
+        db = Database(Path(settings.db_path)).open()
+        store = FileStore(Path(settings.raw_dir).parent)
+        try:
+            rep = apply_retention_purge(
+                db,
+                store=store,
+                news_retention_days=args.days,
+                news_max_items=args.cap,
+            )
+            if args.json:
+                print(json.dumps(rep.to_dict(), indent=2))
+            else:
+                print("Retention Purge Complete:")
+                print(f"  Expired news items:       {rep.news_items_expired}")
+                print(f"  Cap-pruned news items:    {rep.news_items_pruned_for_cap}")
+                print(f"  Deindexed documents:      {rep.documents_deindexed}")
+                print(f"  Stale temp files removed: {rep.temp_files_removed}")
+                if rep.details:
+                    print("Details:")
+                    for d in rep.details:
+                        print(f"  - {d}")
+            return 0
+        finally:
+            db.close()
+    return 2
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
@@ -615,6 +963,28 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _backup(args)
         if args.command == "restore":
             return _restore(args)
+        if args.command == "block":
+            return _block(args)
+        if args.command == "unblock":
+            return _unblock(args)
+        if args.command == "blocks":
+            return _blocks(args)
+        if args.command == "remove":
+            return _remove(args)
+        if args.command == "images":
+            return _images(args)
+        if args.command == "entities":
+            return _entities(args)
+        if args.command == "pause":
+            return _pause(args)
+        if args.command == "resume":
+            return _resume(args)
+        if args.command == "stop":
+            return _stop(args)
+        if args.command == "status":
+            return _status(args)
+        if args.command == "retain":
+            return _retain(args)
     except ConfigError as exc:
         print(f"error [{exc.code}]: {exc.message}", file=sys.stderr)
         return 3

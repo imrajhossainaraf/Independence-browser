@@ -543,6 +543,72 @@ Verification:
 - Tested CLI backup and restore commands in both `--json` and human-readable formats.
 - Tested offline mode operation with sockets blocked.
 
+## ADR-033: Operator Controls, Data Retention, and Policy Documents (Step 25)
+
+Context:
+Step 25 requires operator controls for operational safety and legal compliance:
+- Operator blocklist (hosts, domains, prefixes) persisting in SQLite, immediately blocking crawler frontier queues, future crawls, and indexing.
+- Document removal by exact URL or registered domain, deindexing from FTS (`doc_fts` and `doc_fts_tri`), updating URL state to `blocked`, and optionally purging unreferenced raw gzip content files.
+- News management: disabling news sources (marking enabled=0, deactivating items, removing news docs from FTS), and single-item removal.
+- Image takedowns: marking status='removed' in database and deleting physical 160px and 480px WebP files from disk.
+- Entity removals: deleting entity and cascading deletion across entity_aliases and entity_facts.
+- Crawler runtime flow control: `PAUSE` flag file to pause the crawl loop without killing processes, `STOP` flag file to gracefully stop the crawl, and status inspection.
+- Drive and permission inspection: auditing data directories for network shares (UNC paths), cloud sync folders (OneDrive, Dropbox, iCloud, etc.) that threaten SQLite WAL lock safety, and world-writable directory permissions.
+- Data retention enforcement: deactivating news items older than `news_retention_days` (default 14), enforcing `news_max_items` (default 500) oldest-first, and running FileStore cleanup for interrupted temp files and orphaned blobs.
+- Core public policy and legal documents:
+  - `docs/crawler-policy.md`: bot identity, RFC 9309 robots compliance, polite crawl delay, contact info, exclusion instructions.
+  - `docs/privacy-policy-draft.md`: zero telemetry, no tracking cookies, local processing, transparent on-disk storage.
+  - `docs/sources-and-licenses.md`: scope of allowed sources, RSS fair-use summary indexing, CC BY-SA & CC0 attribution, WebP thumbnail rules.
+  - `docs/removal-procedure.md`: runbook for URL, domain, news, and image removals.
+
+Decisions:
+1. Persistent Operator Blocks:
+   - Migration `0005_operator_blocks.sql` creates table `operator_blocks (id INTEGER PRIMARY KEY, kind TEXT CHECK(kind IN ('host', 'domain', 'prefix')), target TEXT NOT NULL, reason TEXT, created_at TEXT NOT NULL)`.
+   - `block_target()` inserts block record, cascades to mark matching active documents as `removed`, deindexes from FTS (`doc_fts` and `doc_fts_tri`), and marks matching URLs in `urls` as `blocked`.
+   - `unblock_target()` removes block record.
+   - `list_blocks()` lists active operator blocks.
+   - Crawl pipeline loads persisted operator blocks at startup into `self.blocklist`.
+2. Removal and Takedown Controls:
+   - `remove_document()` supports `--url` (exact match or normalized key) and `--domain` (all matching URLs under host or registered domain). Marks status `removed`, deindexes from FTS tables, updates `urls` to `blocked`, and if `--purge-raw` is passed, identifies unreferenced raw hashes and calls `store.delete_raw()`.
+   - `disable_news_source()` disables source, deactivates items, deindexes associated documents from FTS.
+   - `remove_news_item()` deactivates single item and deindexes its document.
+   - `takedown_image()` marks image `removed` and deletes WebP thumbnail files on disk.
+   - `remove_entity()` deletes entity and cascades to aliases and facts.
+3. Flow Control and Status:
+   - `pause_crawler()` creates `PAUSE` file in data directory; pipeline pauses in sleep loop while file exists.
+   - `resume_crawler()` deletes `PAUSE` file.
+   - `stop_crawler()` creates `STOP` file.
+   - `check_engine_status()` returns `EngineStatusReport` with status (`healthy`, `paused`, `stopped`, `warning`), disk space, counts, and safety warnings.
+   - `inspect_drive_and_permissions()` audits for UNC paths, cloud-sync folders, and world-writable directories.
+4. Data Retention:
+   - `apply_retention_purge()` runs on schedule or CLI `retain purge`. Deactivates news older than retention period, enforces cap by pruning oldest, deindexes from FTS, and runs FileStore `recover()`.
+5. CLI Integration:
+   - `search-engine block <kind> <target> [--reason <reason>] [--db <path>]`
+   - `search-engine unblock <kind> <target> [--db <path>]`
+   - `search-engine blocks [--json] [--db <path>]`
+   - `search-engine remove (--url <url> | --domain <domain>) [--purge-raw] [--reason <reason>] [--db <path>] [--json]`
+   - `search-engine news disable-source <source> [--db <path>]`
+   - `search-engine news remove-item <id> [--reason <reason>] [--db <path>]`
+   - `search-engine images takedown <id> [--reason <reason>] [--db <path>]`
+   - `search-engine entities remove <id> [--db <path>]`
+   - `search-engine pause [--data-dir <path>]`
+   - `search-engine resume [--data-dir <path>]`
+   - `search-engine stop [--data-dir <path>]`
+   - `search-engine status [--json] [--db <path>]`
+   - `search-engine retain purge [--days <n>] [--cap <m>] [--db <path>] [--json]`
+
+Verification:
+- 11 comprehensive unit tests in `tests/unit/test_operator_controls.py`.
+- Tested host and domain blocking with automatic FTS deindexing.
+- Tested URL and domain document removal with raw file purging.
+- Tested news source disabling and single item takedown.
+- Tested image takedown and disk file unlinking.
+- Tested entity removal cascading.
+- Tested pause and resume flow via filesystem flags.
+- Tested drive audit detection for UNC paths and cloud-sync directories.
+- Tested retention purge deactivating expired news and enforcing count caps.
+- Tested CLI invocations for all operator commands with JSON and text outputs.
+
 
 
 

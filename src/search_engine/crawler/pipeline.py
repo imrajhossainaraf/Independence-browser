@@ -98,6 +98,19 @@ class CrawlPipeline:
 
         # Build allowlist and blocklist
         self.blocklist = Blocklist()
+        try:
+            with self.db.reader() as conn:
+                for row in conn.execute("SELECT kind, target FROM operator_blocks"):
+                    b_kind, b_target = str(row[0]), str(row[1])
+                    if b_kind == "host":
+                        self.blocklist.block_host(b_target)
+                    elif b_kind == "domain":
+                        self.blocklist.block_domain(b_target)
+                    elif b_kind == "prefix":
+                        self.blocklist.block_prefix(b_target)
+        except Exception as exc:
+            logger.debug("Could not load operator blocks: %s", exc)
+
         self.allowlist_domains: set[str] = set()
 
         if self.settings.allowlist_mode:
@@ -125,6 +138,7 @@ class CrawlPipeline:
 
         self._stop_requested = False
         self._stop_file = self.data_dir / "STOP"
+        self._pause_file = self.data_dir / "PAUSE"
 
     def _check_disk_space(self) -> bool:
         """Return True if sufficient disk space is available."""
@@ -252,6 +266,15 @@ class CrawlPipeline:
                     # 1. Safety check: STOP file
                     if self._stop_file.exists():
                         logger.info("STOP file detected at %s. Halting crawl.", self._stop_file)
+                        status = "stop_file"
+                        break
+
+                    # 1b. Safety check: PAUSE file
+                    while self._pause_file.exists() and not self._stop_requested:
+                        if self._stop_file.exists():
+                            break
+                        time.sleep(0.5)
+                    if self._stop_requested or self._stop_file.exists():
                         status = "stop_file"
                         break
 

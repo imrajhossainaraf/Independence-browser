@@ -32,7 +32,9 @@ Release A (v0.1.0). Steps 19, 20, 28 are Release B and skipped.
 | 22 | API-first search server | done | step-22 | 555 tests, 86% cov; Versioned read-only /api/v1 (health, home, news, search, images, suggest), OpenAPI 3.1 contract, host/origin/rate hardening, server-security & threat model (ADR-030) |
 | 23 | Thin web client (M2) | done | step-23 | 561 tests, 86% cov; Milestone M2 achieved: static HTML/CSS/JS client, strict textContent XSS safety, WAI-ARIA combobox, responsive layout, WCAG 2.2 AA (ADR-031) |
 | 24 | Backup, restore, offline mode | done | step-24 | 573 tests, 86% cov; Online backup (Connection.backup), manifest hashing, integrity checks, index consistency verification, safe restore to empty target, offline serving (ADR-032) |
-| 25-27 | Controls, metrics, full eval | in_progress | | |
+| 25 | Operator controls & policy | done | step-25 | 584 tests, 86% cov; Blocklist, document/news/image/entity removal, pause/resume/stop, drive audit, retention purge, legal/policy docs (ADR-033) |
+| 26 | Metrics & diagnostic reports | in_progress | | |
+| 27 | Full evaluation & benchmarks | todo | | |
 | 29 | Real collection (human controlled) | blocked on human | | |
 | 30 | Package v0.1.0 | todo | | |
 

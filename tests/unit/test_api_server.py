@@ -459,7 +459,7 @@ def test_health_check_endpoint_reports_status_without_paths(test_db: Database) -
     data = resp.json()
 
     assert data["api_version"] == __version__
-    assert data["schema_version"] in {"0003", "0004"}
+    assert data["schema_version"] in {"0003", "0004", "0005"}
     assert data["index_version"] == 1
     assert data["components"]["database"] == "healthy"
     assert data["components"]["index"] == "healthy"
