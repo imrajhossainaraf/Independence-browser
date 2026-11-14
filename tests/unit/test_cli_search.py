@@ -107,3 +107,25 @@ def test_cli_eval_command(capsys: pytest.CaptureFixture[str]) -> None:
     assert "Search Evaluation Report [DEV SET]" in captured.out
     assert "Regression Check" in captured.out
     assert "PASSED" in captured.out
+
+
+def test_cli_approve_preflight_command(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    data_dir = tmp_path / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    seeds = data_dir / "seeds.txt"
+    seeds.write_text("https://example.com/\n", encoding="utf-8")
+
+    code = main(["--set", f"seeds_file={seeds}", "approve-preflight"])
+    assert code == 0
+    captured = capsys.readouterr()
+    assert "Preflight approval created" in captured.out
+    assert (data_dir / "preflight.approved.json").exists()
+
+
+def test_cli_crawl_real_mode_refuses_when_disabled(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    code = main(["--set", "real_network_enabled=false", "crawl", "--mode", "real"])
+    assert code == 4
+    captured = capsys.readouterr()
+    assert "real network is disabled" in captured.err

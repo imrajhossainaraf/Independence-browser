@@ -731,14 +731,25 @@ class Frontier:
 
     def has_pending(self, now: datetime | None = None) -> bool:
         """Check if any work remains in pending, retry, or leased states."""
-        iso_now = _now(now)
         row = self._conn.execute(
-            "SELECT 1 FROM urls WHERE status = 'pending' "
-            "OR (status = 'retry' AND (next_attempt_at IS NULL OR next_attempt_at <= ?)) "
-            "OR status = 'leased' LIMIT 1",
-            (iso_now,),
+            "SELECT 1 FROM urls WHERE status IN ('pending', 'leased', 'retry') LIMIT 1"
         ).fetchone()
         return row is not None
+
+    def next_retry_delay(self, now: datetime | None = None) -> float | None:
+        """Return seconds until the earliest retry URL is due, or None."""
+        current_dt = now or datetime.now(UTC)
+        row = self._conn.execute(
+            "SELECT MIN(next_attempt_at) FROM urls "
+            "WHERE status = 'retry' AND next_attempt_at IS NOT NULL"
+        ).fetchone()
+        if row is None or row[0] is None:
+            return None
+        try:
+            target_dt = datetime.fromisoformat(str(row[0]))
+            return max(0.0, (target_dt - current_dt).total_seconds())
+        except Exception:
+            return 0.1
 
     def stats(self) -> dict[str, int]:
         """Return total counts of URLs grouped by status."""

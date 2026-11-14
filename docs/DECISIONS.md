@@ -255,6 +255,42 @@ Decision:
   - 489 total project tests passing with 88% overall test coverage and sockets blocked.
 Consequences: The crawler frontier is resilient, bounded, and crash-safe. Step 16 can now connect the crawl pipeline with minimal safety controls (STOP file, disk space check, Windows-safe shutdown, reconciling run report).
 
+## ADR-025: Controlled Crawl Pipeline with Safety Controls (Step 16)
+
+Context: Step 16 connects the frontier, scheduler, SafeFetcher, content extraction adapters, atomic file storage, and FTS5 indexer into one bounded, stoppable, resumable crawl pipeline under strict safety invariants (D12 allowlist scope, D13 preflight authorization, loopback isolation, single choke point, structured RunReport).
+Decision:
+- Implemented `src/search_engine/crawler/preflight.py`:
+  - `build_manifest`: Assembles canonical manifest of seeds, news sources, entity seeds, allowlist mode, user-agent, policy URL, news image policies, and all crawl/storage limits.
+  - `compute_manifest_hash`: Computes SHA-256 over deterministic JSON representation.
+  - `create_preflight_approval`: Operator command generating `data/preflight.approved.json`.
+  - `verify_preflight_approval`: Mandatory gate for `crawl --mode real`. Verifies `real_network_enabled` is True and approval file exists and matches current hash in constant time.
+- Implemented `src/search_engine/crawler/pipeline.py`:
+  - `CrawlPipeline`: Bounded crawl coordinator managing the fetch loop across database and storage layers.
+  - Minimal safety controls:
+    - STOP file (`data/STOP`): Polled every loop; immediately halts pending work gracefully.
+    - Signal handling: Windows-safe handlers for `SIGINT` (Ctrl+C), `SIGBREAK` (Ctrl+Break), and `SIGTERM` via `signal.signal`.
+    - Disk space check: `shutil.disk_usage` guard checking `min_free_disk_bytes` (50 MiB threshold); halts and records `disk_low` before disk exhaustion.
+    - Limits: Page count cap (`max_pages`), runtime cap (`max_runtime_seconds`), and storage cap (`max_storage_bytes`).
+  - Crawl path execution:
+    - Leased URLs submitted to `Scheduler.approve(url)`: enforces DNS, IP policy, robots.txt, politeness delays, and concurrency.
+    - Politeness delay handling: gracefully waits up to allowed threshold or schedules backoff retry.
+    - Approved URLs fetched through single choke point `SafeFetcher`.
+    - Redirects returned as un-followed `Redirect` objects and re-submitted through the full approval path as `source="redirect"`.
+    - Content extraction via `extract_content` adapter registry (HTML, text, PDF, XML sitemaps, RSS/Atom feeds).
+    - Noindex meta directives stored in `documents` with status `noindex` and excluded from `doc_fts`.
+    - Outgoing links discovered and queued into `Frontier` respecting `nofollow`.
+    - Raw responses compressed and stored content-addressed via `FileStore`.
+    - Clean resume: Resumes interrupted crawls without duplicate fetching by resetting crashed leases on cold start.
+  - RunReport: Reconciles all processed URLs with exact event reasons (`ACCEPTED`, `STORED`, `NOINDEX`, `BLOCKED_ROBOTS`, `BLOCKED_POLICY`, `SKIPPED_LIMIT`, `SKIPPED_DUPLICATE`, `FETCHED`, `FAILED`, `UNSUPPORTED`).
+- Extended CLI in `src/search_engine/cli.py`:
+  - `search-engine crawl --mode fixture|real [--seeds PATH] [--limit N] [--time-limit S] [--json]`
+  - `search-engine approve-preflight`
+- Verification:
+  - 8 comprehensive integration tests in `tests/unit/test_crawl_pipeline.py` testing end-to-end crawl on fixture server, robots-disallowed links, redirects through full approval path, max page limits, mixed content types (HTML, text, noindex), STOP file halting, kill-and-resume work preservation, and preflight authorization gating.
+  - 2 CLI tests in `tests/unit/test_cli_search.py` verifying preflight approval generation and real mode refusal.
+  - 499 total project tests passing with 88% overall test coverage and sockets blocked.
+Consequences: A local site crawls end to end and the report explains every URL. Step 17 can now implement deduplication, canonical grouping, and freshness updates.
+
 
 
 

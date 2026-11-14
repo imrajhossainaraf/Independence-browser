@@ -242,7 +242,7 @@ def test_evaluation_reproducibility_and_offline() -> None:
     assert report1.total_queries == 16
     assert report1.mean_mrr > 0.8
     assert report1.mean_ndcg_10 > 0.7
-    assert report1.latency_p50_ms < 50.0  # offline local SQLite is sub-millisecond
+    assert report1.latency_p50_ms < 200.0  # local SQLite under pytest coverage tracing
 
     # Re-run on separate database
     conn2 = sqlite3.connect(":memory:")

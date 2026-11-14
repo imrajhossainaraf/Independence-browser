@@ -123,7 +123,9 @@ def _extract_title(tree: LexborHTMLParser) -> str:
     return ""
 
 
-def _extract_canonical_url(tree: LexborHTMLParser, final_url: str) -> tuple[str | None, list[str]]:
+def _extract_canonical_url(
+    tree: LexborHTMLParser, final_url: str, *, allow_loopback: bool = False
+) -> tuple[str | None, list[str]]:
     """Extract rel=canonical link, resolved against final_url and normalized."""
     warnings: list[str] = []
     canonical_node = tree.css_first("link[rel*='canonical']")
@@ -136,7 +138,7 @@ def _extract_canonical_url(tree: LexborHTMLParser, final_url: str) -> tuple[str 
 
     resolved = urllib.parse.urljoin(final_url, raw_href)
     try:
-        norm = normalize(resolved)
+        norm = normalize(resolved, allow_loopback=allow_loopback)
         return norm.key, warnings
     except (UrlRejected, ValueError):
         warnings.append("invalid_canonical_url")
@@ -302,6 +304,8 @@ def _extract_links(
     tree: LexborHTMLParser,
     final_url: str,
     robots_meta: RobotsMeta,
+    *,
+    allow_loopback: bool = False,
 ) -> list[OutgoingLink]:
     """Extract outgoing links, resolved against final_url, normalized, with nofollow."""
     links: list[OutgoingLink] = []
@@ -319,7 +323,7 @@ def _extract_links(
 
         resolved = urllib.parse.urljoin(final_url, raw_href)
         try:
-            norm = normalize(resolved)
+            norm = normalize(resolved, allow_loopback=allow_loopback)
         except (UrlRejected, ValueError):
             continue
 
@@ -564,9 +568,6 @@ def extract_html(
     if not title:
         warnings.append("missing_title")
 
-    canonical_url, can_warnings = _extract_canonical_url(tree, final_url)
-    warnings.extend(can_warnings)
-
     desc_node = tree.css_first(
         "meta[name='description' i], "
         "meta[property='og:description' i], "
@@ -584,7 +585,20 @@ def extract_html(
     headings = _extract_headings(tree)
     robots_meta = _extract_robots_meta(tree)
     published_at = _extract_published_date(tree)
-    outgoing_links = _extract_links(tree, final_url, robots_meta)
+
+    allow_loopback = False
+    try:
+        norm_final = normalize(final_url, allow_loopback=True)
+        allow_loopback = norm_final.host in ("127.0.0.1", "localhost", "::1")
+    except (UrlRejected, ValueError):
+        allow_loopback = False
+
+    canonical_url, can_warnings = _extract_canonical_url(
+        tree, final_url, allow_loopback=allow_loopback
+    )
+    warnings.extend(can_warnings)
+
+    outgoing_links = _extract_links(tree, final_url, robots_meta, allow_loopback=allow_loopback)
     media_refs = _extract_media(tree, final_url)
     image_candidates = _extract_image_candidates(tree, final_url)
 

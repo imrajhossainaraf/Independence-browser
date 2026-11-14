@@ -13,7 +13,7 @@ from typing import Any
 from search_engine import __version__
 from search_engine.config import describe, field_sources, load_settings
 from search_engine.db import Database
-from search_engine.errors import ConfigError
+from search_engine.errors import ConfigError, PolicyDenied
 from search_engine.search import SearchService
 
 
@@ -99,6 +99,49 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional file path to write the output report.",
     )
+
+    crawl_parser = subparsers.add_parser("crawl", help="run controlled web crawler")
+    crawl_parser.add_argument(
+        "--mode",
+        choices=["fixture", "real"],
+        default="fixture",
+        help="crawl mode: 'fixture' (loopback) or 'real' (preflight approved)",
+    )
+    crawl_parser.add_argument(
+        "--seeds",
+        type=Path,
+        default=None,
+        help="path to seeds.txt (defaults to data/seeds.txt)",
+    )
+    crawl_parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="maximum number of pages to store",
+    )
+    crawl_parser.add_argument(
+        "--time-limit",
+        type=float,
+        default=None,
+        help="maximum crawl runtime in seconds",
+    )
+    crawl_parser.add_argument(
+        "--db",
+        type=Path,
+        default=None,
+        help="database path",
+    )
+    crawl_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="machine-readable JSON output",
+    )
+
+    subparsers.add_parser(
+        "approve-preflight",
+        help="authorize real-mode crawling by hashing inputs into preflight.approved.json (D13)",
+    )
+
     return parser
 
 
@@ -197,6 +240,60 @@ def _eval(args: argparse.Namespace) -> int:
     return run_evaluation(args)
 
 
+def _approve_preflight(args: argparse.Namespace) -> int:
+    from search_engine.crawler.preflight import create_preflight_approval
+
+    overrides = _parse_overrides(args.overrides)
+    settings = load_settings(args.config_file, overrides)
+    out_file = create_preflight_approval(settings)
+    print(f"Preflight approval created: {out_file}")
+    return 0
+
+
+def _crawl(args: argparse.Namespace) -> int:
+    from search_engine.crawler.pipeline import CrawlPipeline
+
+    overrides = _parse_overrides(args.overrides)
+    if args.db:
+        overrides["db_path"] = str(args.db)
+    settings = load_settings(args.config_file, overrides)
+
+    # Seeds from arguments or settings
+    seed_urls: list[str] = []
+    seeds_file = args.seeds or settings.seeds_file
+    if seeds_file.exists():
+        from search_engine.crawler.sources import parse_seeds, read_lines
+
+        allow_loopback = (args.mode == "fixture") or settings.allow_loopback_for_tests
+        res = parse_seeds(read_lines(seeds_file), allow_loopback=allow_loopback)
+        seed_urls = [u.key for u in res.entries]
+
+    pipeline = CrawlPipeline(settings, mode=args.mode)
+    result = pipeline.run(
+        seeds=seed_urls,
+        max_pages=args.limit,
+        max_time_seconds=args.time_limit,
+    )
+
+    if args.json:
+        out = {
+            "run_id": result.run_id,
+            "status": result.status,
+            "pages_stored": result.pages_stored,
+            "duration_seconds": result.duration_seconds,
+            "frontier": result.frontier_stats,
+            "report": result.report.to_dict(),
+        }
+        print(json.dumps(out, indent=2))
+    else:
+        print(result.report.render())
+        print(
+            f"Status: {result.status} | Pages stored: {result.pages_stored} | "
+            f"Duration: {result.duration_seconds:.1f}s"
+        )
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
@@ -211,9 +308,16 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _demo(args)
         if args.command == "eval":
             return _eval(args)
+        if args.command == "approve-preflight":
+            return _approve_preflight(args)
+        if args.command == "crawl":
+            return _crawl(args)
     except ConfigError as exc:
         print(f"error [{exc.code}]: {exc.message}", file=sys.stderr)
         return 3
+    except PolicyDenied as exc:
+        print(f"error [{exc.code}]: {exc.message}", file=sys.stderr)
+        return 4
     return 2  # pragma: no cover - argparse rejects unknown commands first
 
 
