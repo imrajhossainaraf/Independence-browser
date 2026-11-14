@@ -1,0 +1,980 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Search Engine API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health Check",
+        "operationId": "health_check_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/home": {
+      "get": {
+        "tags": [
+          "home"
+        ],
+        "summary": "Get Home",
+        "operationId": "get_home_api_v1_home_get",
+        "parameters": [
+          {
+            "name": "if-none-match",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-None-Match"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HomePayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/news": {
+      "get": {
+        "tags": [
+          "news"
+        ],
+        "summary": "Get News",
+        "operationId": "get_news_api_v1_news_get",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by news category",
+              "title": "Category"
+            },
+            "description": "Filter by news category"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number"
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Items per page",
+              "default": 20,
+              "title": "Page Size"
+            },
+            "description": "Items per page"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewsPagePayload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/search": {
+      "get": {
+        "tags": [
+          "search"
+        ],
+        "summary": "Search",
+        "operationId": "search_api_v1_search_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Search query string",
+              "title": "Q"
+            },
+            "description": "Search query string"
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Alias for q",
+              "title": "Query"
+            },
+            "description": "Alias for q"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "description": "Page number",
+              "default": 1,
+              "title": "Page"
+            },
+            "description": "Page number"
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "description": "Results per page",
+              "default": 10,
+              "title": "Page Size"
+            },
+            "description": "Results per page"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by document type",
+              "title": "Type"
+            },
+            "description": "Filter by document type"
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by language",
+              "title": "Language"
+            },
+            "description": "Filter by language"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Search Api V1 Search Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/suggest": {
+      "get": {
+        "tags": [
+          "suggest"
+        ],
+        "summary": "Get Suggestions",
+        "operationId": "get_suggestions_api_v1_suggest_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 100,
+              "description": "Prefix to autocomplete",
+              "title": "Q"
+            },
+            "description": "Prefix to autocomplete"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 20,
+              "minimum": 1,
+              "description": "Maximum suggestions to return",
+              "default": 8,
+              "title": "Limit"
+            },
+            "description": "Maximum suggestions to return"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/images/{image_id}": {
+      "get": {
+        "tags": [
+          "images"
+        ],
+        "summary": "Get Image",
+        "operationId": "get_image_api_v1_images__image_id__get",
+        "parameters": [
+          {
+            "name": "image_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Image Id"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Thumbnail size: 160 or 480",
+              "default": "160",
+              "title": "Size"
+            },
+            "description": "Thumbnail size: 160 or 480"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/documents/{doc_id}": {
+      "get": {
+        "tags": [
+          "documents"
+        ],
+        "summary": "Get Document Metadata",
+        "operationId": "get_document_metadata_api_v1_documents__doc_id__get",
+        "parameters": [
+          {
+            "name": "doc_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Doc Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentMetadataResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "DataAges": {
+        "properties": {
+          "last_crawl_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Crawl At"
+          },
+          "last_poll_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Poll At"
+          },
+          "newest_item_age_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Newest Item Age Seconds"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "DataAges",
+        "description": "Timestamp summary for health status."
+      },
+      "DocumentMetadataResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "doc_type": {
+            "type": "string",
+            "title": "Doc Type"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "word_count": {
+            "type": "integer",
+            "title": "Word Count",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "url",
+          "title",
+          "doc_type"
+        ],
+        "title": "DocumentMetadataResponse",
+        "description": "GET /api/v1/documents/{id} response model."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "healthy"
+          },
+          "api_version": {
+            "type": "string",
+            "title": "Api Version",
+            "default": "0.1.0"
+          },
+          "schema_version": {
+            "type": "string",
+            "title": "Schema Version",
+            "default": "0004"
+          },
+          "index_version": {
+            "type": "integer",
+            "title": "Index Version",
+            "default": 1
+          },
+          "data_ages": {
+            "$ref": "#/components/schemas/DataAges"
+          },
+          "components": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Components"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "HealthResponse",
+        "description": "GET /api/v1/health response model."
+      },
+      "HomePayload": {
+        "properties": {
+          "generated_at": {
+            "type": "string",
+            "title": "Generated At"
+          },
+          "data_age_seconds": {
+            "type": "integer",
+            "title": "Data Age Seconds"
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale"
+          },
+          "sources_health": {
+            "items": {
+              "$ref": "#/components/schemas/SourceHealthSummary"
+            },
+            "type": "array",
+            "title": "Sources Health"
+          },
+          "top_stories": {
+            "items": {
+              "$ref": "#/components/schemas/TopStoryItem"
+            },
+            "type": "array",
+            "title": "Top Stories"
+          },
+          "latest": {
+            "items": {
+              "$ref": "#/components/schemas/NewsItemSummary"
+            },
+            "type": "array",
+            "title": "Latest"
+          },
+          "categories": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Categories"
+          }
+        },
+        "type": "object",
+        "required": [
+          "generated_at",
+          "data_age_seconds",
+          "is_stale"
+        ],
+        "title": "HomePayload",
+        "description": "Response payload for GET /api/v1/home (D20)."
+      },
+      "ImageRef": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "alt": {
+            "type": "string",
+            "title": "Alt",
+            "default": ""
+          },
+          "width": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Width"
+          },
+          "height": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Height"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "ImageRef",
+        "description": "Reference to an opaque, approved local image (D15, D20)."
+      },
+      "NewsItemSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "source_name": {
+            "type": "string",
+            "title": "Source Name"
+          },
+          "published_at": {
+            "type": "string",
+            "title": "Published At"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "image": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImageRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "url",
+          "source_name",
+          "published_at",
+          "category",
+          "summary"
+        ],
+        "title": "NewsItemSummary",
+        "description": "Summary of an individual active news story."
+      },
+      "NewsPagePayload": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NewsItemSummary"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total_count": {
+            "type": "integer",
+            "title": "Total Count"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          },
+          "total_pages": {
+            "type": "integer",
+            "title": "Total Pages"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_count",
+          "page",
+          "page_size",
+          "total_pages"
+        ],
+        "title": "NewsPagePayload",
+        "description": "Paged news stories payload for GET /api/v1/news (D20)."
+      },
+      "SourceHealthSummary": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "feed_url_key": {
+            "type": "string",
+            "title": "Feed Url Key"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "poll_interval_minutes": {
+            "type": "integer",
+            "title": "Poll Interval Minutes"
+          },
+          "last_success_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success At"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "consecutive_failures": {
+            "type": "integer",
+            "title": "Consecutive Failures",
+            "default": 0
+          },
+          "is_healthy": {
+            "type": "boolean",
+            "title": "Is Healthy",
+            "default": true
+          },
+          "is_stale": {
+            "type": "boolean",
+            "title": "Is Stale",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "feed_url_key",
+          "category",
+          "poll_interval_minutes",
+          "status"
+        ],
+        "title": "SourceHealthSummary",
+        "description": "Health status summary of a configured news source."
+      },
+      "StorySourceRef": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "published_at": {
+            "type": "string",
+            "title": "Published At"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "url",
+          "published_at",
+          "category"
+        ],
+        "title": "StorySourceRef",
+        "description": "Source reference for a multi-source news cluster."
+      },
+      "SuggestResponse": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "title": "Query"
+          },
+          "suggestions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Suggestions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "query",
+          "suggestions"
+        ],
+        "title": "SuggestResponse",
+        "description": "GET /api/v1/suggest response model."
+      },
+      "TopStoryItem": {
+        "properties": {
+          "cluster_id": {
+            "type": "string",
+            "title": "Cluster Id"
+          },
+          "headline": {
+            "type": "string",
+            "title": "Headline"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/StorySourceRef"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "published_at": {
+            "type": "string",
+            "title": "Published At"
+          },
+          "image": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImageRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "cluster_id",
+          "headline",
+          "summary",
+          "published_at"
+        ],
+        "title": "TopStoryItem",
+        "description": "Clustered top story headline on the home page (D16, D20)."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

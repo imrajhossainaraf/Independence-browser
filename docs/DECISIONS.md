@@ -434,6 +434,36 @@ Verification:
 - Invariant 10 verbatim substring verification.
 - Verified negative query null handling, preview card assembly, entity flag isolation, 7-day recent news window, home payload generation, stale detection, paged news filtering, and diacritic-insensitive autocomplete with sub-50ms latency.
 
+## ADR-030: API-First Search Server (Step 22)
+
+Context:
+Implement Step 22 ("API-First Search Server") per BUILD_PLAN.md and BUILD_INSTRUCTIONS.md (D15, D19, D20, Appendix E). All engine functionality must be reachable through a versioned, read-only, tightly secured HTTP API (`/api/v1`), allowing any client (including the upcoming thin web client in Step 23) to be a thin fetcher without engine dependencies. Operator actions (crawling, polling, indexing, backups, removals) are never routed over HTTP.
+
+Key Architecture & Decisions:
+1. Endpoints & Serialization under `/api/v1`:
+   - `GET /health`: System and component status (database, index, news), API, schema, and index versions, and data ages without leaking filesystem paths.
+   - `GET /home`: Returns `HomePayload` with in-memory 60s cache and ETag / `If-None-Match` (HTTP 304).
+   - `GET /news`: Paged news listings with category filtering, limit/offset bounds.
+   - `GET /search`: Search with synopsis, preview panel, and recent news. Validates query length (max 256), page size (max 50).
+   - `GET /suggest`: Autocomplete suggestions, 404 when `feature_autocomplete=False`.
+   - `GET /images/{id}`: Opaque ID thumbnail serving (`size=160|480`), 404 when `feature_images=False`, immutable cache headers.
+   - `GET /documents/{id}`: Document metadata without exposing raw storage files.
+   - OpenAPI 3.1 specification exported to `docs/openapi.json` and checked by contract tests.
+2. Security & Request Hardening:
+   - Access control: Bound to `127.0.0.1` by default. Startup refused on any non-loopback bind without an API key.
+   - API key management: 256-bit URL-safe tokens (`se_...`), stored only as SHA-256 hashes in `api_keys` table or settings, transmitted via `Authorization: Bearer <key>`, constant-time comparison via `hmac.compare_digest`.
+   - Host header allowlist: Blocks DNS-rebinding against local servers; unapproved Host returns 400 Bad Request.
+   - CORS: Disabled by default; exact configured origins only when enabled; wildcard `*` forbidden.
+   - Rate limiting: 60 rpm sliding-window per client identifier (hashed IP / key) returning 429 with `Retry-After`.
+   - Security headers: Strict CSP (`default-src 'none'`), `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY`, server-generated `X-Request-ID`.
+   - Error shape: Single uniform shape `{"error": {"code": "...", "message": "..."}}` across all status codes without stack trace leakage.
+   - Documentation: `docs/server-security.md` (laptop-server checklist) and `docs/threat-model.md` (T1-T17 threat matrix).
+
+Verification:
+- 14 comprehensive unit and contract tests in `tests/unit/test_api_server.py`.
+- Verified OpenAPI contract equality, security headers, Host header rejection, CORS exact origin, API key validation and revocation, non-loopback startup refusal, rate limiter 429, home ETag 304 caching, search validation and logging redaction, feature flag 404 isolation, path leakage prevention, and Section 7A graceful degradation (empty news, missing index, locked db).
+
+
 
 
 

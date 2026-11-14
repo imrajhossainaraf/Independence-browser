@@ -29,7 +29,8 @@ Release A (v0.1.0). Steps 19, 20, 28 are Release B and skipped.
 | S4 | Spike: poller, server, Task Scheduler | done (GO) | spike-s4 | WAL p95 2.15ms, ProcessLock crash recovery, Task Scheduler documented (ADR-027) |
 | 18 | News ingestion | done | step-18 | 531 tests, 88% cov; ProcessLock, poller, clustering, retention, 304 caching, Task Scheduler documented (ADR-028) |
 | 21 | Panels and home | done | step-21 | 541 tests, 87% cov; Grounded synopsis (Invariant 10), preview/entity cards, recent news, home payload, autocomplete (ADR-029) |
-| 22-23 | API and thin client (M2) | todo | | |
+| 22 | API-first search server | done | step-22 | 555 tests, 86% cov; Versioned read-only /api/v1 (health, home, news, search, images, suggest), OpenAPI 3.1 contract, host/origin/rate hardening, server-security & threat model (ADR-030) |
+| 23 | Thin web client (M2) | todo | | |
 | 24-27 | Backup, controls, metrics, full eval | todo | | |
 | 29 | Real collection (human controlled) | blocked on human | | |
 | 30 | Package v0.1.0 | todo | | |

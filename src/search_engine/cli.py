@@ -155,6 +155,29 @@ def build_parser() -> argparse.ArgumentParser:
     )
     poll_parser.add_argument("--json", action="store_true", help="machine-readable JSON output")
 
+    serve_parser = subparsers.add_parser("serve", help="start read-only HTTP API server")
+    serve_parser.add_argument("--host", default=None, help="host to bind (default: 127.0.0.1)")
+    serve_parser.add_argument("--port", type=int, default=None, help="port to bind (default: 8000)")
+    serve_parser.add_argument("--db", type=Path, default=None, help="database path")
+    serve_parser.add_argument(
+        "--dev", action="store_true", help="run with interactive docs enabled"
+    )
+
+    auth_parser = subparsers.add_parser("auth", help="manage API keys for server access")
+    auth_sub = auth_parser.add_subparsers(dest="auth_command", required=True)
+
+    create_key = auth_sub.add_parser("create-key", help="generate a new API key")
+    create_key.add_argument("--name", default="default", help="human label for this key")
+    create_key.add_argument("--db", type=Path, default=None, help="database path")
+
+    list_keys = auth_sub.add_parser("list-keys", help="list active API keys (hashes only)")
+    list_keys.add_argument("--db", type=Path, default=None, help="database path")
+    list_keys.add_argument("--json", action="store_true", help="output as JSON")
+
+    revoke_key = auth_sub.add_parser("revoke-key", help="revoke an API key by id")
+    revoke_key.add_argument("id", help="key id to revoke")
+    revoke_key.add_argument("--db", type=Path, default=None, help="database path")
+
     return parser
 
 
@@ -332,6 +355,118 @@ def _news(args: argparse.Namespace) -> int:
     return 2
 
 
+def _serve(args: argparse.Namespace) -> int:
+    import uvicorn
+
+    from search_engine.api.app import create_app
+    from search_engine.api.security import verify_server_startup_safety
+
+    overrides = _parse_overrides(args.overrides)
+    if args.host:
+        overrides["server_host"] = args.host
+    if args.port:
+        overrides["server_port"] = str(args.port)
+    if args.db:
+        overrides["db_path"] = str(args.db)
+    if args.dev:
+        overrides["development_mode"] = "true"
+
+    settings = load_settings(args.config_file, overrides)
+    db = Database(Path(settings.db_path)).open()
+    try:
+        # Refuse startup on non-loopback bind without an API key per D15
+        with db.reader() as conn:
+            verify_server_startup_safety(settings, conn)
+
+        app = create_app(db, settings=settings)
+        print(
+            f"Starting search engine API server on http://{settings.server_host}:{settings.server_port}"
+        )
+        uvicorn.run(app, host=settings.server_host, port=settings.server_port, log_level="info")
+        return 0
+    finally:
+        db.close()
+
+
+def _auth(args: argparse.Namespace) -> int:
+    import secrets
+    from datetime import UTC, datetime
+
+    from search_engine.api.security import generate_api_key, hash_api_key
+
+    overrides = _parse_overrides(args.overrides)
+    if args.db:
+        overrides["db_path"] = str(args.db)
+    settings = load_settings(args.config_file, overrides)
+    db = Database(Path(settings.db_path)).open()
+
+    try:
+        if args.auth_command == "create-key":
+            key_id = f"key_{secrets.token_hex(6)}"
+            raw_key = generate_api_key()
+            k_hash = hash_api_key(raw_key)
+            now_iso = datetime.now(UTC).isoformat()
+            name = args.name.strip()
+
+            with db.transaction() as conn:
+                conn.execute(
+                    """
+                    INSERT INTO api_keys (id, name, key_hash, created_at, status)
+                    VALUES (?, ?, ?, ?, 'active')
+                    """,
+                    (key_id, name, k_hash, now_iso),
+                )
+
+            print(f"Created API key '{name}' (ID: {key_id})")
+            print(f"API Key: {raw_key}")
+            print(
+                "IMPORTANT: Save this key now. It is stored as a SHA-256 hash "
+                "and cannot be recovered."
+            )
+            return 0
+
+        if args.auth_command == "list-keys":
+            with db.reader() as conn:
+                rows = conn.execute(
+                    "SELECT id, name, created_at, status FROM api_keys ORDER BY created_at DESC"
+                ).fetchall()
+            if args.json:
+                data = [
+                    {
+                        "id": str(r[0]),
+                        "name": str(r[1]),
+                        "created_at": str(r[2]),
+                        "status": str(r[3]),
+                    }
+                    for r in rows
+                ]
+                print(json.dumps(data, indent=2))
+            else:
+                if not rows:
+                    print("No API keys found.")
+                else:
+                    for r in rows:
+                        print(f"{r[0]} | {r[1]} | status={r[3]} | created={r[2]}")
+            return 0
+
+        if args.auth_command == "revoke-key":
+            now_iso = datetime.now(UTC).isoformat()
+            with db.transaction() as conn:
+                cur = conn.execute(
+                    "UPDATE api_keys SET status = 'revoked', revoked_at = ? WHERE id = ?",
+                    (now_iso, args.id),
+                )
+                if cur.rowcount == 0:
+                    print(f"Error: key '{args.id}' not found.", file=sys.stderr)
+                    return 1
+            print(f"Key '{args.id}' has been revoked.")
+            return 0
+
+    finally:
+        db.close()
+    return 2
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
@@ -352,6 +487,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _crawl(args)
         if args.command == "news":
             return _news(args)
+        if args.command == "serve":
+            return _serve(args)
+        if args.command == "auth":
+            return _auth(args)
     except ConfigError as exc:
         print(f"error [{exc.code}]: {exc.message}", file=sys.stderr)
         return 3

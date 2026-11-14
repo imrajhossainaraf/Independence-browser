@@ -164,6 +164,23 @@ class Settings(BaseSettings):
     feature_autocomplete: bool = False
     feature_remote_test: bool = False
 
+    # Server and API settings (Step 22)
+    server_host: str = Field(default="127.0.0.1")
+    server_port: int = Field(default=8000, ge=1, le=65535)
+    api_auth_required: bool = False
+    api_allowed_hosts: tuple[str, ...] = (
+        "127.0.0.1",
+        "localhost",
+        "127.0.0.1:8000",
+        "localhost:8000",
+        "testserver",
+    )
+    api_cors_enabled: bool = False
+    api_cors_origins: tuple[str, ...] = ()
+    api_rate_limit_rpm: int = Field(default=60, ge=1, le=1000)
+    api_request_timeout_seconds: float = Field(default=5.0, ge=0.5, le=30.0)
+    log_query_text: bool = False
+
     # Secrets are never committed; shown redacted.
     api_key_hash: SecretStr | None = None
 
@@ -187,6 +204,28 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return tuple(part.strip().lower() for part in value.split(",") if part.strip())
         return value
+
+    @field_validator("api_cors_origins", mode="before")
+    @classmethod
+    def _validate_cors_origins(cls, value: object) -> tuple[str, ...]:
+        if isinstance(value, str):
+            parts = tuple(part.strip() for part in value.split(",") if part.strip())
+        elif isinstance(value, (list, tuple, set)):
+            parts = tuple(str(p).strip() for p in value if str(p).strip())
+        else:
+            parts = ()
+        if "*" in parts:
+            raise ValueError("wildcard origin '*' is forbidden; exact origins required")
+        return parts
+
+    @field_validator("api_allowed_hosts", mode="before")
+    @classmethod
+    def _validate_allowed_hosts(cls, value: object) -> tuple[str, ...]:
+        if isinstance(value, str):
+            return tuple(part.strip() for part in value.split(",") if part.strip())
+        if isinstance(value, (list, tuple, set)):
+            return tuple(str(p).strip() for p in value if str(p).strip())
+        return ("127.0.0.1", "localhost", "127.0.0.1:8000", "localhost:8000", "testserver")
 
     @field_validator("log_level")
     @classmethod
