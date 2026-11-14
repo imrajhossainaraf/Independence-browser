@@ -65,3 +65,45 @@ class ExtractedDocument:
     def is_indexable(self) -> bool:
         """True if robots meta directives permit indexing."""
         return not self.robots_meta.noindex
+
+
+class AdapterStatus:
+    """Standard status codes for adapter extraction outcomes."""
+
+    ACTIVE = "active"
+    METADATA_ONLY = "metadata_only"
+    UNSUPPORTED = "unsupported"
+    NOINDEX = "noindex"
+
+
+@dataclass(frozen=True)
+class NewsItemCandidate:
+    """A news item candidate discovered from an RSS or Atom feed."""
+
+    title: str
+    link: str
+    published_at: str | None
+    summary: str
+    category: str = ""
+    image_url: str | None = None
+
+
+@dataclass(frozen=True)
+class SitemapUrl:
+    """A URL discovered from an XML sitemap or sitemap index."""
+
+    loc: str
+    lastmod: str | None = None
+    is_sitemap_index: bool = False
+
+
+@dataclass
+class AdapterResult:
+    """The result returned by a content adapter."""
+
+    doc_type: str  # "page", "pdf", "text", "news"
+    status: str  # "active", "metadata_only", "unsupported", "noindex"
+    document: ExtractedDocument | None = None
+    news_items: list[NewsItemCandidate] = field(default_factory=list)
+    sitemap_urls: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)

@@ -96,6 +96,20 @@ Decision: GO. Adopt a dual-layer isolation approach:
 2. Cross-platform timeout and process tree killing are enforced via `psutil` (7.2.2, BSD-3-Clause).
 Consequences: Step 9 will build `src/search_engine/extract/pdf.py` using this isolated worker harness.
 
+## ADR-017: Content adapters (Step 9)
+
+Context: Step 9 requires multi-format content handling (plain text, PDF via isolated worker, RSS/Atom feeds, XML sitemaps) feeding the indexer and crawl frontier without crashing, memory exhaustion, or security bypass.
+Decision:
+- Created content adapters in `src/search_engine/extract/`:
+  - `PlainTextAdapter` (`text.py`): Extracts UTF-8/charset-normalized text, titles from first line or filename, word counts, and language hints.
+  - `PdfAdapter` (`pdf.py`, `pdf_worker.py`): Isolated worker subprocess running `pypdf` (7.1.0, BSD-3-Clause) with Win32 Job Object and `psutil` tree monitoring per ADR-016. Enforces hard timeouts (15s), memory limits (512 MiB), and page limits (100 pages). Extracts text, metadata (title, author), and bookmarks. Safely handles malformed/corrupted PDFs with `AdapterStatus.ERROR` or `DEGRADED`.
+  - `FeedAdapter` (`feed.py`): RSS 2.0 and Atom 1.0 feed parser using `defusedxml.ElementTree` (blocking entity expansion and external DTDs). Emits `NewsItemCandidate` items with title, link, summary, published_date, author, and categories for news ingestion (Step 18).
+  - `SitemapAdapter` (`sitemap.py`): XML sitemap and sitemap index parser using `defusedxml.ElementTree`. Supports standard XML and gzip-compressed sitemaps (`.xml.gz` and magic bytes `1f 8b`) with bounded decompression (capped at 10 MiB) to prevent gzip bombs. Yields `SitemapUrl` entries with normalized URLs, lastmod, changefreq, and priority.
+  - `AdapterRegistry` and `extract_content` (`adapters.py`): Content-Type and URL path dispatcher routing to appropriate adapters, falling back gracefully to text or empty documents on unhandled types.
+- Verification: 17 unit tests in `tests/unit/test_adapters.py` covering all adapters, isolated worker memory and timeout traps, defusedxml security, gzip bombs, and corrupt inputs. 400 project tests passed with 89% total coverage.
+Consequences: Crawler, indexer, and news pipeline have unified, secure access to multi-format web content.
+
+
 
 
 
