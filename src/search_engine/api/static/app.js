@@ -630,14 +630,38 @@
     el.errorDismiss.addEventListener("click", hideError);
 
     // Settings modal
-    el.settingsBtn.addEventListener("click", () => {
+    function closeSettingsDialog() {
+      el.settingsDialog.hidden = true;
+      el.settingsDialog.style.display = "none";
+    }
+
+    function openSettingsDialog() {
       const currentKey = sessionStorage.getItem(config.apiKeySessionKey) || "";
       el.apiKeyInput.value = currentKey;
       el.settingsDialog.hidden = false;
+      el.settingsDialog.style.display = "flex";
+      el.apiKeyInput.focus();
+    }
+
+    // Ensure hidden on startup
+    closeSettingsDialog();
+
+    el.settingsBtn.addEventListener("click", openSettingsDialog);
+
+    el.settingsClose.addEventListener("click", closeSettingsDialog);
+
+    // Close when clicking outside the dialog card (on backdrop)
+    el.settingsDialog.addEventListener("click", (e) => {
+      if (e.target === el.settingsDialog) {
+        closeSettingsDialog();
+      }
     });
 
-    el.settingsClose.addEventListener("click", () => {
-      el.settingsDialog.hidden = true;
+    // Close on Escape key
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !el.settingsDialog.hidden) {
+        closeSettingsDialog();
+      }
     });
 
     el.settingsSave.addEventListener("click", () => {
@@ -647,7 +671,7 @@
       } else {
         sessionStorage.removeItem(config.apiKeySessionKey);
       }
-      el.settingsDialog.hidden = true;
+      closeSettingsDialog();
       if (state.currentView === "home") {
         loadHome();
       } else {

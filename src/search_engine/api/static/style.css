@@ -78,6 +78,11 @@ body {
   outline-offset: 2px;
 }
 
+/* Global Hidden Attribute Override (ensure display:flex/grid doesn't break hidden) */
+[hidden] {
+  display: none !important;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -803,6 +808,10 @@ mark.highlight {
   justify-content: center;
   z-index: 1000;
   padding: 1rem;
+}
+
+.modal-backdrop[hidden] {
+  display: none !important;
 }
 
 .modal-card {
