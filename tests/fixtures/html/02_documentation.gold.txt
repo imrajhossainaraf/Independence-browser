@@ -1,0 +1,5 @@
+Database Connection Pooling
+Connection pooling minimizes the overhead of repeatedly opening and closing database sockets in high-concurrency environments.
+Recommended Pool Sizing
+For most read-heavy workloads, sizing the connection pool to match the number of physical CPU cores plus effective disk spindles provides optimal throughput without thread contention.
+Ensure that connection timeouts are configured between five and ten seconds to prevent query starvation during sudden traffic spikes.

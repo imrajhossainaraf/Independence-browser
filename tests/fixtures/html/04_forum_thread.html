@@ -1,0 +1,12 @@
+<!DOCTYPE html><html><head><title>Optimal SSD filesystem options</title></head><body>
+<nav><a href="/forum">Forums</a> &gt; Hardware</nav>
+<main>
+<h1>Optimal SSD filesystem options for SQLite WAL</h1>
+<div class="post">
+<p>When running intensive SQLite write transactions with write-ahead logging enabled on modern NVMe drives, filesystem selection plays a measurable role in durability guarantees.</p>
+<p>Using standard NTFS or ext4 with default allocation unit sizes provides the most consistent fsync performance and avoids excessive write amplification.</p>
+<p>Ensure that directory syncing is avoided when not supported by the underlying platform to prevent unexpected permission errors or latency spikes.</p>
+</div>
+</main>
+<footer>Community Board 2026</footer>
+</body></html>

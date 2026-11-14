@@ -1,0 +1,4 @@
+About the Quantum Sensing Institute
+The Quantum Sensing Institute is an independent non-profit research foundation dedicated to pioneering atomic gravimetry and quantum optical measurement standards.
+Founded in 2018, our multidisciplinary team of physicists, optical engineers, and computer scientists collaborates with international university consortia.
+Our open-source instrument blueprints and calibrated datasets are freely accessible to accelerate scientific discovery in geophysics and environmental observation.

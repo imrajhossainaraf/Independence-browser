@@ -64,6 +64,10 @@ mypy_path = "src"
 files = ["src", "tests", "scripts"]
 explicit_package_bases = true
 
+[[tool.mypy.overrides]]
+module = ["dateutil.*", "trafilatura.*"]
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 minversion = "8.0"
 testpaths = ["tests", "spikes"]

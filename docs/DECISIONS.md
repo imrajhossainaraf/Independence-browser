@@ -72,5 +72,18 @@ Evaluation: Evaluated across 20 diverse HTML fixtures in `spikes/s5_extraction/f
 Dependencies: `trafilatura` (Apache-2.0), `selectolax` (MIT), `charset-normalizer` (MIT), and `python-dateutil` (BSD-3-Clause) added per Section 4 list.
 Consequences: Step 8 will use this hybrid strategy in `src/search_engine/extract/html.py`.
 
+## ADR-015: HTML parsing and document extraction (Step 8)
+
+Context: Step 8 requires deterministic, searchable document extraction from HTML into a structured `ExtractedDocument` without network dependencies, crashes, or boilerplate leakage.
+Decision:
+- Created `src/search_engine/extract/models.py` defining `ExtractedDocument`, `OutgoingLink`, `RobotsMeta`, and `MediaRef`.
+- Implemented `src/search_engine/extract/html.py` with `extract_html`:
+  - Primary text extraction via `trafilatura` (2.3.1) with `selectolax` (Lexbor backend) fallback when token count is low (<40 tokens) per ADR-014.
+  - Extracts: final URL, separate normalized canonical URL, title (with og:title, twitter:title, and h1 fallbacks), meta description, site name, headings (h1..h6 in document order), language hint per D10 (html lang attribute, Content-Language header/meta, Unicode-script heuristic for Cyrillic/CJK/Kana/Hangul/Arabic/Hebrew/Devanagari/Greek/Thai, else 'und'), published date (ISO 8601 parsed from meta tags, JSON-LD scripts, or `<time>` elements), outgoing normalized links with `nofollow` flag, robots meta (`noindex`, `nofollow`, `noarchive`, `nosnippet`, `none`, `all`), SHA-256 content hash, media references (image alt text, figure captions, video and audio sources, transcript links), image candidate URLs (`og:image`, `twitter:image`, and first content image >= 200x200), word count, and structured warnings.
+  - Memory and DOS bounds: input capped at `max_bytes` (default 2 MiB) with truncation warnings; charset decoding falls back gracefully through UTF-8, meta charset, `charset-normalizer`, and replacement; hostile nesting (1500+ levels) and giant attributes parse safely without recursion or hang; unexpected parse errors fail closed to empty documents or warnings.
+  - Verification: 20 checked-in diverse fixtures in `tests/fixtures/html/` with hand-crafted gold text passed all quality thresholds (avg F1 = 0.993, min F1 = 0.953, 0.0% boilerplate leakage).
+Consequences: Content adapters (Step 9) and the FTS5 indexer (Step 10) can consume `ExtractedDocument` directly.
+
+
 
 

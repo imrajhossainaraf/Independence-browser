@@ -14,7 +14,7 @@ Release A (v0.1.0). Steps 19, 20, 28 are Release B and skipped.
 | 6 | SafeFetcher | done | step-06 | 347 tests, 97% coverage; single choke point, approvals, streaming caps, magic-byte sniffing |
 | 7 | Robots and scheduler | done | step-07 | 360 tests, 96% coverage; Protego adapter, robots cache, Scheduler.approve, concurrency & politeness |
 | S5 | Spike: text extraction bake-off | done (GO) | spike-s5 | 20 fixtures, combined avg F1 0.993, min F1 0.953, 0 leakage (ADR-014) |
-| 8 | HTML extraction | todo | | |
+| 8 | HTML extraction | done | step-08 | 378 tests, 94% coverage; deterministic extraction, models, 20 gold fixtures F1 0.993, 0 leakage (ADR-015) |
 | 9 | Adapters | todo | | |
 | 10 | FTS5 index | todo | | |
 | 11 | Query processing, CLI search | todo | | |

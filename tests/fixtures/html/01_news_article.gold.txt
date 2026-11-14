@@ -1,0 +1,4 @@
+Spacecraft Successfully Touches Down on Remote Asteroid
+An autonomous exploration probe touched down on the carbon-rich asteroid early Tuesday morning after a journey spanning four billion miles through the inner solar system.
+Scientists at mission control confirmed signal acquisition at 04:12 UTC. Initial telemetry indicates all onboard scientific instruments are operating normally and structural integrity remains at one hundred percent.
+The robotic lander will collect core samples and analyze subsurface ice deposits over the next six months before attempting a return trajectory to Earth in late 2028.
