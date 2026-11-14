@@ -105,6 +105,30 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional file path to write the output report.",
     )
 
+    daily_use_parser = subparsers.add_parser(
+        "daily-use", help="run automated 10-point daily-use checklist"
+    )
+    daily_use_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output raw JSON report instead of Markdown.",
+    )
+
+    benchmark_parser = subparsers.add_parser(
+        "benchmark", help="run Section 7 synthetic performance benchmarks"
+    )
+    benchmark_parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed for deterministic corpus generation (default: 42).",
+    )
+    benchmark_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output raw JSON report instead of Markdown.",
+    )
+
     crawl_parser = subparsers.add_parser("crawl", help="run controlled web crawler")
     crawl_parser.add_argument(
         "--mode",
@@ -432,6 +456,42 @@ def _eval(args: argparse.Namespace) -> int:
     args.queries = EVAL_DIR / "queries.csv"
     args.judgments = EVAL_DIR / "judgments.csv"
     return run_evaluation(args)
+
+
+def _daily_use(args: argparse.Namespace) -> int:
+    from search_engine.evaluation.daily_use import run_daily_use_checklist
+
+    report = run_daily_use_checklist()
+    if args.json:
+        data = {
+            "passed": report.passed,
+            "total_steps": report.total_steps,
+            "passed_steps": report.passed_steps,
+            "results": [
+                {
+                    "step_num": r.step_num,
+                    "name": r.name,
+                    "passed": r.passed,
+                    "message": r.message,
+                }
+                for r in report.results
+            ],
+        }
+        print(json.dumps(data, indent=2))
+    else:
+        print(report.render_markdown())
+    return 0 if report.passed else 1
+
+
+def _benchmark(args: argparse.Namespace) -> int:
+    from search_engine.evaluation.synthetic import run_synthetic_benchmarks
+
+    report = run_synthetic_benchmarks(seed=getattr(args, "seed", 42))
+    if args.json:
+        print(json.dumps(report.to_dict(), indent=2))
+    else:
+        print(report.render_markdown())
+    return 0 if report.all_passed else 1
 
 
 def _approve_preflight(args: argparse.Namespace) -> int:
@@ -1034,6 +1094,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _demo(args)
         if args.command == "eval":
             return _eval(args)
+        if args.command == "daily-use":
+            return _daily_use(args)
+        if args.command == "benchmark":
+            return _benchmark(args)
         if args.command == "approve-preflight":
             return _approve_preflight(args)
         if args.command == "crawl":

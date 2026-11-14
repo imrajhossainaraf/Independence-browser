@@ -1,0 +1,22 @@
+case_id,query,category,expected_panel_kind,expect_synopsis,notes
+case-01,sqlite fts5 full text search,synopsis_positive,preview,true,Synopsis case with high term coverage on doc 1
+case-02,kubernetes service mesh istio,synopsis_positive,preview,true,Synopsis case with high term coverage on doc 52
+case-03,transformer self attention mechanisms,synopsis_positive,preview,true,Synopsis case with high term coverage on doc 22
+case-04,web application security xss csrf sql injection,synopsis_positive,preview,true,Synopsis case with high term coverage on doc 55
+case-05,docker containerization microservices architecture,synopsis_positive,preview,true,Synopsis case with high term coverage on doc 51
+case-06,sqlite documentation,preview_positive,preview,false,Preview card case for official SQLite docs
+case-07,redis architecture guide,preview_positive,preview,false,Preview card case for Redis caching guide
+case-08,duckdb columnar,preview_positive,preview,false,Preview card case for DuckDB OLAP engine
+case-09,owasp top ten security,preview_positive,preview,false,Preview card case for OWASP security guide
+case-10,github actions ci automation,preview_positive,preview,false,Preview card case for CI/CD documentation
+case-11,Albert Einstein,entity_release_b,entity,false,Entity card case for physicist (Release B)
+case-12,James Webb Space Telescope,entity_release_b,entity,false,Entity card case for observatory (Release B)
+case-13,Marie Curie,entity_release_b,entity,false,Entity card case for chemist (Release B)
+case-14,Isaac Newton,entity_release_b,entity,false,Entity card case for mathematician (Release B)
+case-15,Perseverance Rover,entity_release_b,entity,false,Entity card case for Mars rover (Release B)
+case-16,unobtanium antigravity teleportation tachyon,negative,none,false,Out-of-corpus query yielding zero results and null panels
+case-17,randomxyz123abc gibberish987,negative,none,false,Gibberish term producing zero results and null panels
+case-18,quokka platypus kangaroo marsupial,negative,none,false,Fauna query yielding zero results and null panels
+case-19,mithril adamantium vibranium kryptonite,negative,none,false,Fictional minerals producing zero results and null panels
+case-20,pterodactyl velociraptor triceratops stegosaurus,negative,none,false,Dinosaur query producing zero results and null panels
+case-21,in the about and,negative_stopword,none,false,Stopword-only query producing null synopsis

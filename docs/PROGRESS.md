@@ -34,7 +34,7 @@ Release A (v0.1.0). Steps 19, 20, 28 are Release B and skipped.
 | 24 | Backup, restore, offline mode | done | step-24 | 573 tests, 86% cov; Online backup (Connection.backup), manifest hashing, integrity checks, index consistency verification, safe restore to empty target, offline serving (ADR-032) |
 | 25 | Operator controls & policy | done | step-25 | 584 tests, 86% cov; Blocklist, document/news/image/entity removal, pause/resume/stop, drive audit, retention purge, legal/policy docs (ADR-033) |
 | 26 | Metrics & diagnostic reports | done | step-26 | 589 tests, 86% cov; Metrics persistence, percentile calculations, diagnostic gatherers, CLI report command (ADR-034) |
-| 27 | Full evaluation & benchmarks | in_progress | | |
+| 27 | Full evaluation & benchmarks | done | step-27 | 596 tests, 86% cov; 58 queries, held-out P@5 0.66, MRR 0.92, nDCG@10 0.83, 10-point daily-use checklist, Section 7 benchmarks (ADR-035) |
 | 29 | Real collection (human controlled) | blocked on human | | |
 | 30 | Package v0.1.0 | todo | | |
 

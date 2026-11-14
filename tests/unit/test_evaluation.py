@@ -239,7 +239,7 @@ def test_evaluation_reproducibility_and_offline() -> None:
     populate_eval_database(conn1)
 
     report1 = evaluate_system(conn1, split="dev")
-    assert report1.total_queries == 16
+    assert report1.total_queries >= 30
     assert report1.mean_mrr > 0.8
     assert report1.mean_ndcg_10 > 0.7
     assert report1.latency_p50_ms < 200.0  # local SQLite under pytest coverage tracing

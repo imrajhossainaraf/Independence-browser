@@ -651,6 +651,44 @@ Verification:
 - Tested fixture-populated metrics reflecting failure events, HTTP errors, feed failures, image rejections, and latency distributions.
 - Tested CLI `report` subcommands across all categories in both text and JSON formats.
 
+## ADR-035: Full Evaluation, Daily-Use Checklist & Benchmarks (Step 27)
+
+Context:
+Step 27 requires proving that the engine is useful, fresh, grounded, reliable, and fast enough before any real-web crawling takes place:
+- Expanded query set: >= 50 queries (58 total: 34 dev, 24 held-out) covering exact names, navigational, short informational, long questions, misspellings, ambiguous terms, local languages (fr, de, zh, ja), news intent, document type & language filters, and no-answer queries.
+- Protected held-out set: 24 queries evaluated strictly on held-out only, achieving:
+  - Precision@5: 0.6625 (gate >= 0.60)
+  - MRR: 0.9167 (gate >= 0.70)
+  - nDCG@10: 0.8283 (gate >= 0.70)
+  - Zero-result rate: 0.0%
+- Grounded synopsis (Invariant 10) & panel quality:
+  - 100% of synopsis sentences are verbatim substrings of the cited stored documents.
+  - Zero panels and null synopsis on the negative query set.
+  - Preview cards assembled with domain, title, date, clean lead, and source name.
+  - `eval/panel_cases.csv` created covering positive synopsis, preview cards, Release B entity cards, and negative/stopword queries.
+- News clustering quality:
+  - Labeled dataset `eval/news_labels.csv` evaluated with `cluster_news_items()` achieving pairwise cluster precision >= 0.90 (gate >= 0.90).
+- Performance benchmarks on synthetic 1,000-document + 500-news corpus (`src/search_engine/evaluation/synthetic.py`):
+  - Deterministic corpus generator (`seed=42`).
+  - Index build time: 0.29 s (gate < 120.0 s).
+  - Search latency p50: 12.87 ms (gate < 80.0 ms), p95: 21.26 ms (gate < 300.0 ms).
+  - Home latency p95: 2.16 ms (gate < 200.0 ms).
+  - Serving resident memory (RSS via psutil): 57.21 MB (gate < 300.0 MB).
+  - Crawl peak resident memory: 57.21 MB (gate < 600.0 MB).
+- Automated daily-use checklist (`src/search_engine/evaluation/daily_use.py`):
+  - 10-point checklist: (1) open home, (2) read story link, (3) search, (4) read synopsis, (5) open sidebar source, (6) search offline, (7) recover from empty query, (8) use filter, (9) follow suggestion, (10) restore from backup.
+  - 10/10 steps automated and passing.
+  - CLI commands `search-engine daily-use` and `search-engine benchmark`.
+  - Mirrored scripts: `scripts/daily-use.ps1` and `Makefile` target `daily-use:`.
+- Failure analysis & regression reporting:
+  - Expanded `EvaluationReport.render_markdown()` with 10 worst queries table, classifying likely cause and recommended actions.
+  - Updated `eval/baseline.json`.
+
+Verification:
+- 16 comprehensive evaluation unit tests (9 in `test_evaluation.py` and 7 in `test_full_evaluation.py`).
+- All Section 7 performance, quality, and reliability gates verified and passing.
+- 1:1 parity between PowerShell scripts and Makefile targets maintained.
+
 
 
 

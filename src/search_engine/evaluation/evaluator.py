@@ -127,7 +127,44 @@ class EvaluationReport:
             mrr = stats["mrr"]
             ndcg = stats["ndcg_10"]
             lines.append(f"| {cat} | {cnt} | {p5:.3f} | {mrr:.3f} | {ndcg:.3f} |")
+
+        # Failure analysis of 10 worst queries (by lowest nDCG@10 / MRR)
+        worst_queries = sorted(self.queries, key=lambda q: (q.ndcg_10, q.mrr, q.p_at_5))[:10]
+        if worst_queries:
+            lines.extend(
+                [
+                    "",
+                    "## Failure Analysis (10 Worst Queries)",
+                    "| Query ID | Query | Category | nDCG@10 | MRR | Results | Likely Cause | Recommended Action |",  # noqa: E501
+                    "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
+                ]
+            )
+            for q in worst_queries:
+                cause, action = classify_failure(q)
+                lines.append(
+                    f"| {q.query_id} | {q.query} | {q.category} | {q.ndcg_10:.3f} | "  # noqa: E501
+                    f"{q.mrr:.3f} | {q.result_count} | {cause} | {action} |"
+                )
+
         return "\n".join(lines)
+
+
+def classify_failure(q: QueryMetrics) -> tuple[str, str]:
+    """Classify the root cause of low performance on a query and suggest an action."""
+    if q.category in ("no_answer", "negative") and q.result_count == 0:
+        return "unanswerable query", "Intentional empty results for out-of-corpus query"
+    if q.result_count == 0:
+        return "recall / vocabulary gap", "Add synonyms or expand FTS5 tokenizer coverage"
+    if q.mrr < 0.5:
+        return "ranking / BM25 weights", "Tune title and heading boost multipliers in RankingConfig"
+    if q.category == "misspelling":
+        return "spelling correction", "Check edit distance and vocabulary thresholds in DidYouMean"
+    if q.ndcg_10 < 0.7:
+        return (
+            "precision at top ranks",
+            "Refine secondary signals (exact title boost, phrase boost)",
+        )
+    return "minor rank variance", "Reviewed and acceptable within natural variance"
 
 
 def calculate_dcg(grades: list[int], k: int = 10) -> float:

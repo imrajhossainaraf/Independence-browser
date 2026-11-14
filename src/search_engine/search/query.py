@@ -220,12 +220,16 @@ def build_fts5_or_expression(tokens: list[str]) -> str:
 def build_fts5_trigram_expression(tokens: list[str]) -> str:
     """Build a trigram expression for doc_fts_tri.
 
-    For CJK or unspaced text, joins characters without spaces to form contiguous trigrams.
+    Filters tokens to those with at least 3 characters (or falls back to combined tokens).
+    Each valid token is quoted and joined with AND.
     """
     if not tokens:
         return ""
-    # Strip spaces to form a continuous sequence for trigram evaluation
-    combined = "".join("".join(tokens).split())
-    if not combined:
-        return ""
-    return quote_for_fts5(combined)
+    valid_tokens = [t.strip() for t in tokens if len(t.strip()) >= 3]
+    if not valid_tokens:
+        combined = "".join("".join(tokens).split())
+        if len(combined) < 3:
+            return ""
+        return quote_for_fts5(combined)
+    quoted = [quote_for_fts5(t) for t in valid_tokens]
+    return " AND ".join(quoted)

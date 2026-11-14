@@ -1,41 +1,83 @@
 {
-  "timestamp": "2026-11-14T04:14:15.735100+00:00",
+  "timestamp": "2026-11-14T16:07:48.686560+00:00",
   "split": "dev",
   "index_version": 1,
   "ranking_version": "bm25_v1",
   "config_hash": "750163345948c105",
-  "total_queries": 16,
-  "mean_p_at_5": 0.3125,
-  "mean_p_at_10": 0.2476,
-  "mean_mrr": 1.0,
-  "mean_ndcg_10": 0.9046,
-  "latency_mean_ms": 0.28,
-  "latency_p50_ms": 0.25,
-  "latency_p95_ms": 0.66,
+  "total_queries": 34,
+  "mean_p_at_5": 0.4765,
+  "mean_p_at_10": 0.4407,
+  "mean_mrr": 0.9412,
+  "mean_ndcg_10": 0.8276,
+  "latency_mean_ms": 1.78,
+  "latency_p50_ms": 1.84,
+  "latency_p95_ms": 4.24,
   "zero_result_rate": 0.0,
   "by_category": {
     "exact": {
       "count": 3.0,
-      "p_at_5": 0.3,
+      "p_at_5": 0.43333333333333335,
       "mrr": 1.0,
-      "ndcg_10": 0.8826882528915396
+      "ndcg_10": 0.8178338477255669
     },
     "informational": {
       "count": 10.0,
-      "p_at_5": 0.22000000000000003,
+      "p_at_5": 0.28,
       "mrr": 1.0,
-      "ndcg_10": 0.8920399589129584
+      "ndcg_10": 0.7979660792696187
     },
     "news": {
       "count": 1.0,
-      "p_at_5": 0.4,
+      "p_at_5": 0.6,
       "mrr": 1.0,
-      "ndcg_10": 0.9052598568324595
+      "ndcg_10": 0.8894266414041428
     },
     "multilingual": {
       "count": 2.0,
       "p_at_5": 0.75,
       "mrr": 1.0,
+      "ndcg_10": 1.0
+    },
+    "exact_name": {
+      "count": 4.0,
+      "p_at_5": 0.8,
+      "mrr": 1.0,
+      "ndcg_10": 0.8360184209897654
+    },
+    "navigational": {
+      "count": 3.0,
+      "p_at_5": 0.39999999999999997,
+      "mrr": 1.0,
+      "ndcg_10": 0.8906085984604925
+    },
+    "misspelling": {
+      "count": 3.0,
+      "p_at_5": 0.8333333333333334,
+      "mrr": 1.0,
+      "ndcg_10": 0.858103068660648
+    },
+    "long_question": {
+      "count": 2.0,
+      "p_at_5": 0.2,
+      "mrr": 1.0,
+      "ndcg_10": 0.7169918302551794
+    },
+    "ambiguous": {
+      "count": 2.0,
+      "p_at_5": 0.8,
+      "mrr": 1.0,
+      "ndcg_10": 0.7547050564845981
+    },
+    "filter": {
+      "count": 2.0,
+      "p_at_5": 0.55,
+      "mrr": 1.0,
+      "ndcg_10": 0.6417097262749809
+    },
+    "no_answer": {
+      "count": 2.0,
+      "p_at_5": 0.0,
+      "mrr": 0.0,
       "ndcg_10": 1.0
     }
   },
@@ -45,11 +87,11 @@
       "query": "sqlite fts5 full text search",
       "split": "dev",
       "category": "exact",
-      "p_at_5": 0.2,
-      "p_at_10": 0.1,
+      "p_at_5": 0.6,
+      "p_at_10": 0.3,
       "mrr": 1.0,
-      "ndcg_10": 1.0,
-      "latency_ms": 0.66,
+      "ndcg_10": 0.963,
+      "latency_ms": 4.24,
       "result_count": 10,
       "top_doc_ids": [
         1,
@@ -64,11 +106,11 @@
       "query": "python async programming",
       "split": "dev",
       "category": "informational",
-      "p_at_5": 0.4,
-      "p_at_10": 0.3333,
+      "p_at_5": 0.6,
+      "p_at_10": 0.5,
       "mrr": 1.0,
-      "ndcg_10": 0.9458,
-      "latency_ms": 0.33,
+      "ndcg_10": 0.887,
+      "latency_ms": 1.25,
       "result_count": 6,
       "top_doc_ids": [
         11,
@@ -83,11 +125,11 @@
       "query": "rust ownership memory safety",
       "split": "dev",
       "category": "informational",
-      "p_at_5": 0.2,
-      "p_at_10": 0.1,
+      "p_at_5": 0.4,
+      "p_at_10": 0.3,
       "mrr": 1.0,
-      "ndcg_10": 0.9085,
-      "latency_ms": 0.33,
+      "ndcg_10": 0.8023,
+      "latency_ms": 1.87,
       "result_count": 10,
       "top_doc_ids": [
         15,
@@ -105,8 +147,8 @@
       "p_at_5": 0.2,
       "p_at_10": 0.1111,
       "mrr": 1.0,
-      "ndcg_10": 0.8609,
-      "latency_ms": 0.41,
+      "ndcg_10": 0.7453,
+      "latency_ms": 1.78,
       "result_count": 9,
       "top_doc_ids": [
         6,
@@ -124,8 +166,8 @@
       "p_at_5": 0.2,
       "p_at_10": 0.1,
       "mrr": 1.0,
-      "ndcg_10": 0.7768,
-      "latency_ms": 0.31,
+      "ndcg_10": 0.5991,
+      "latency_ms": 2.25,
       "result_count": 10,
       "top_doc_ids": [
         21,
@@ -140,11 +182,11 @@
       "query": "transformer self attention mechanisms",
       "split": "dev",
       "category": "informational",
-      "p_at_5": 0.2,
-      "p_at_10": 0.2,
+      "p_at_5": 0.4,
+      "p_at_10": 0.4,
       "mrr": 1.0,
-      "ndcg_10": 0.7768,
-      "latency_ms": 0.21,
+      "ndcg_10": 0.739,
+      "latency_ms": 1.61,
       "result_count": 5,
       "top_doc_ids": [
         22,
@@ -163,7 +205,7 @@
       "p_at_10": 0.125,
       "mrr": 1.0,
       "ndcg_10": 0.9828,
-      "latency_ms": 0.18,
+      "latency_ms": 1.55,
       "result_count": 8,
       "top_doc_ids": [
         25,
@@ -179,10 +221,10 @@
       "split": "dev",
       "category": "informational",
       "p_at_5": 0.2,
-      "p_at_10": 0.1429,
+      "p_at_10": 0.2857,
       "mrr": 1.0,
-      "ndcg_10": 0.8609,
-      "latency_ms": 0.19,
+      "ndcg_10": 0.7391,
+      "latency_ms": 2.04,
       "result_count": 7,
       "top_doc_ids": [
         41,
@@ -197,11 +239,11 @@
       "query": "global climate summit renewable energy",
       "split": "dev",
       "category": "news",
-      "p_at_5": 0.4,
-      "p_at_10": 0.2,
+      "p_at_5": 0.6,
+      "p_at_10": 0.3,
       "mrr": 1.0,
-      "ndcg_10": 0.9053,
-      "latency_ms": 0.21,
+      "ndcg_10": 0.8894,
+      "latency_ms": 4.28,
       "result_count": 10,
       "top_doc_ids": [
         31,
@@ -219,8 +261,8 @@
       "p_at_5": 0.2,
       "p_at_10": 0.1,
       "mrr": 1.0,
-      "ndcg_10": 0.9385,
-      "latency_ms": 0.29,
+      "ndcg_10": 0.7453,
+      "latency_ms": 2.24,
       "result_count": 10,
       "top_doc_ids": [
         32,
@@ -236,10 +278,10 @@
       "split": "dev",
       "category": "informational",
       "p_at_5": 0.2,
-      "p_at_10": 0.125,
+      "p_at_10": 0.25,
       "mrr": 1.0,
-      "ndcg_10": 0.9047,
-      "latency_ms": 0.23,
+      "ndcg_10": 0.7764,
+      "latency_ms": 1.55,
       "result_count": 8,
       "top_doc_ids": [
         33,
@@ -257,15 +299,15 @@
       "p_at_5": 0.2,
       "p_at_10": 0.2,
       "mrr": 1.0,
-      "ndcg_10": 0.8517,
-      "latency_ms": 0.32,
+      "ndcg_10": 0.735,
+      "latency_ms": 2.08,
       "result_count": 10,
       "top_doc_ids": [
         51,
-        14,
         6,
-        5,
-        22
+        19,
+        22,
+        14
       ]
     },
     {
@@ -276,8 +318,8 @@
       "p_at_5": 0.5,
       "p_at_10": 0.5,
       "mrr": 1.0,
-      "ndcg_10": 0.7872,
-      "latency_ms": 0.25,
+      "ndcg_10": 0.7453,
+      "latency_ms": 2.34,
       "result_count": 2,
       "top_doc_ids": [
         52,
@@ -293,7 +335,7 @@
       "p_at_10": 0.125,
       "mrr": 1.0,
       "ndcg_10": 0.9738,
-      "latency_ms": 0.23,
+      "latency_ms": 1.89,
       "result_count": 8,
       "top_doc_ids": [
         53,
@@ -312,7 +354,7 @@
       "p_at_10": 0.5,
       "mrr": 1.0,
       "ndcg_10": 1.0,
-      "latency_ms": 0.17,
+      "latency_ms": 2.39,
       "result_count": 2,
       "top_doc_ids": [
         56,
@@ -328,10 +370,319 @@
       "p_at_10": 1.0,
       "mrr": 1.0,
       "ndcg_10": 1.0,
-      "latency_ms": 0.13,
+      "latency_ms": 1.08,
       "result_count": 1,
       "top_doc_ids": [
         57
+      ]
+    },
+    {
+      "query_id": "Q25",
+      "query": "DuckDB",
+      "split": "dev",
+      "category": "exact_name",
+      "p_at_5": 1.0,
+      "p_at_10": 1.0,
+      "mrr": 1.0,
+      "ndcg_10": 0.7872,
+      "latency_ms": 0.28,
+      "result_count": 1,
+      "top_doc_ids": [
+        6
+      ]
+    },
+    {
+      "query_id": "Q26",
+      "query": "SQLite",
+      "split": "dev",
+      "category": "exact_name",
+      "p_at_5": 1.0,
+      "p_at_10": 1.0,
+      "mrr": 1.0,
+      "ndcg_10": 1.0,
+      "latency_ms": 0.56,
+      "result_count": 3,
+      "top_doc_ids": [
+        3,
+        1,
+        2
+      ]
+    },
+    {
+      "query_id": "Q29",
+      "query": "Docker",
+      "split": "dev",
+      "category": "exact_name",
+      "p_at_5": 1.0,
+      "p_at_10": 1.0,
+      "mrr": 1.0,
+      "ndcg_10": 0.7872,
+      "latency_ms": 0.26,
+      "result_count": 1,
+      "top_doc_ids": [
+        51
+      ]
+    },
+    {
+      "query_id": "Q30",
+      "query": "James Webb Space Telescope",
+      "split": "dev",
+      "category": "exact_name",
+      "p_at_5": 0.2,
+      "p_at_10": 0.2857,
+      "mrr": 1.0,
+      "ndcg_10": 0.7698,
+      "latency_ms": 1.29,
+      "result_count": 7,
+      "top_doc_ids": [
+        41,
+        47,
+        49,
+        44,
+        42
+      ]
+    },
+    {
+      "query_id": "Q33",
+      "query": "sqlite documentation",
+      "split": "dev",
+      "category": "navigational",
+      "p_at_5": 0.75,
+      "p_at_10": 0.75,
+      "mrr": 1.0,
+      "ndcg_10": 1.0,
+      "latency_ms": 0.8,
+      "result_count": 4,
+      "top_doc_ids": [
+        3,
+        1,
+        2,
+        23
+      ]
+    },
+    {
+      "query_id": "Q34",
+      "query": "redis architecture guide",
+      "split": "dev",
+      "category": "navigational",
+      "p_at_5": 0.2,
+      "p_at_10": 0.2,
+      "mrr": 1.0,
+      "ndcg_10": 0.8847,
+      "latency_ms": 1.84,
+      "result_count": 10,
+      "top_doc_ids": [
+        5,
+        51,
+        53,
+        6,
+        19
+      ]
+    },
+    {
+      "query_id": "Q37",
+      "query": "github actions ci automation",
+      "split": "dev",
+      "category": "navigational",
+      "p_at_5": 0.25,
+      "p_at_10": 0.25,
+      "mrr": 1.0,
+      "ndcg_10": 0.7872,
+      "latency_ms": 0.95,
+      "result_count": 4,
+      "top_doc_ids": [
+        54,
+        9,
+        45,
+        18
+      ]
+    },
+    {
+      "query_id": "Q38",
+      "query": "pythn async programming",
+      "split": "dev",
+      "category": "misspelling",
+      "p_at_5": 0.5,
+      "p_at_10": 0.5,
+      "mrr": 1.0,
+      "ndcg_10": 0.7872,
+      "latency_ms": 1.35,
+      "result_count": 2,
+      "top_doc_ids": [
+        11,
+        16
+      ]
+    },
+    {
+      "query_id": "Q39",
+      "query": "kubernetes serice mesh",
+      "split": "dev",
+      "category": "misspelling",
+      "p_at_5": 1.0,
+      "p_at_10": 1.0,
+      "mrr": 1.0,
+      "ndcg_10": 0.7872,
+      "latency_ms": 3.13,
+      "result_count": 1,
+      "top_doc_ids": [
+        52
+      ]
+    },
+    {
+      "query_id": "Q42",
+      "query": "artemis lunar misson",
+      "split": "dev",
+      "category": "misspelling",
+      "p_at_5": 1.0,
+      "p_at_10": 1.0,
+      "mrr": 1.0,
+      "ndcg_10": 1.0,
+      "latency_ms": 2.45,
+      "result_count": 2,
+      "top_doc_ids": [
+        44,
+        42
+      ]
+    },
+    {
+      "query_id": "Q43",
+      "query": "how does write ahead logging improve concurrent read performance",
+      "split": "dev",
+      "category": "long_question",
+      "p_at_5": 0.2,
+      "p_at_10": 0.1,
+      "mrr": 1.0,
+      "ndcg_10": 0.6735,
+      "latency_ms": 2.33,
+      "result_count": 10,
+      "top_doc_ids": [
+        3,
+        7,
+        11,
+        15,
+        6
+      ]
+    },
+    {
+      "query_id": "Q45",
+      "query": "how do transformer attention mechanisms process sequence inputs",
+      "split": "dev",
+      "category": "long_question",
+      "p_at_5": 0.2,
+      "p_at_10": 0.2,
+      "mrr": 1.0,
+      "ndcg_10": 0.7604,
+      "latency_ms": 2.46,
+      "result_count": 10,
+      "top_doc_ids": [
+        22,
+        27,
+        28,
+        6,
+        12
+      ]
+    },
+    {
+      "query_id": "Q47",
+      "query": "rust",
+      "split": "dev",
+      "category": "ambiguous",
+      "p_at_5": 1.0,
+      "p_at_10": 1.0,
+      "mrr": 1.0,
+      "ndcg_10": 0.5419,
+      "latency_ms": 0.47,
+      "result_count": 1,
+      "top_doc_ids": [
+        15
+      ]
+    },
+    {
+      "query_id": "Q48",
+      "query": "python",
+      "split": "dev",
+      "category": "ambiguous",
+      "p_at_5": 0.6,
+      "p_at_10": 0.6,
+      "mrr": 1.0,
+      "ndcg_10": 0.9675,
+      "latency_ms": 1.01,
+      "result_count": 5,
+      "top_doc_ids": [
+        11,
+        12,
+        20,
+        13,
+        3
+      ]
+    },
+    {
+      "query_id": "Q51",
+      "query": "database type:page",
+      "split": "dev",
+      "category": "filter",
+      "p_at_5": 0.6,
+      "p_at_10": 0.5,
+      "mrr": 1.0,
+      "ndcg_10": 0.6844,
+      "latency_ms": 1.27,
+      "result_count": 6,
+      "top_doc_ids": [
+        6,
+        2,
+        8,
+        10,
+        1
+      ]
+    },
+    {
+      "query_id": "Q52",
+      "query": "climate lang:en",
+      "split": "dev",
+      "category": "filter",
+      "p_at_5": 0.5,
+      "p_at_10": 0.5,
+      "mrr": 1.0,
+      "ndcg_10": 0.5991,
+      "latency_ms": 1.35,
+      "result_count": 2,
+      "top_doc_ids": [
+        31,
+        59
+      ]
+    },
+    {
+      "query_id": "Q55",
+      "query": "quantum warp drive antigravity teleportation",
+      "split": "dev",
+      "category": "no_answer",
+      "p_at_5": 0.0,
+      "p_at_10": 0.0,
+      "mrr": 0.0,
+      "ndcg_10": 1.0,
+      "latency_ms": 1.93,
+      "result_count": 2,
+      "top_doc_ids": [
+        25,
+        32
+      ]
+    },
+    {
+      "query_id": "Q58",
+      "query": "faster than light tachyonic subspace transceiver",
+      "split": "dev",
+      "category": "no_answer",
+      "p_at_5": 0.0,
+      "p_at_10": 0.0,
+      "mrr": 0.0,
+      "ndcg_10": 1.0,
+      "latency_ms": 2.5,
+      "result_count": 4,
+      "top_doc_ids": [
+        47,
+        40,
+        50,
+        16
       ]
     }
   ]

@@ -23,3 +23,37 @@ Q21,french cuisine cafe bistrot restaurant,dev,multilingual,French culinary guid
 Q22,berlin munchen deutsche bahn,dev,multilingual,German rail travel with umlauts
 Q23,北京气候峰会 可再生能源,held_out,multilingual,Chinese unspaced climate summit query
 Q24,東京 観光ガイド 浅草 渋谷,held_out,multilingual,Japanese travel guide for Tokyo
+Q25,DuckDB,dev,exact_name,Exact entity and product name lookup
+Q26,SQLite,dev,exact_name,Exact entity and product name lookup
+Q27,Redis,held_out,exact_name,Exact entity and product name lookup
+Q28,Apache Lucene,held_out,exact_name,Exact entity and product name lookup
+Q29,Docker,dev,exact_name,Exact technology name lookup
+Q30,James Webb Space Telescope,dev,exact_name,Exact observatory name lookup
+Q31,RocksDB,held_out,exact_name,Exact database engine name lookup
+Q32,Perseverance Rover,held_out,exact_name,Exact planetary rover lookup
+Q33,sqlite documentation,dev,navigational,Navigational query for official documentation
+Q34,redis architecture guide,dev,navigational,Navigational query for system architecture guide
+Q35,duckdb columnar,held_out,navigational,Navigational query for DuckDB architecture
+Q36,owasp top ten security,held_out,navigational,Navigational query for web security guide
+Q37,github actions ci automation,dev,navigational,Navigational query for CI/CD documentation
+Q38,pythn async programming,dev,misspelling,Misspelled query targeting python async programming
+Q39,kubernetes serice mesh,dev,misspelling,Misspelled query targeting kubernetes service mesh
+Q40,relational datbase btree,held_out,misspelling,Misspelled query targeting relational database indexing
+Q41,transformer attentin mechanisms,held_out,misspelling,Misspelled query targeting transformer attention
+Q42,artemis lunar misson,dev,misspelling,Misspelled query targeting lunar exploration mission
+Q43,how does write ahead logging improve concurrent read performance,dev,long_question,Natural language long technical question
+Q44,what are the security defenses against cross site scripting xss,held_out,long_question,Natural language long security question
+Q45,how do transformer attention mechanisms process sequence inputs,dev,long_question,Natural language long ML question
+Q46,what is the efficiency advantage of tandem perovskite solar cells,held_out,long_question,Natural language long energy question
+Q47,rust,dev,ambiguous,Short ambiguous polysemous keyword
+Q48,python,dev,ambiguous,Short ambiguous polysemous keyword
+Q49,go,held_out,ambiguous,Short ambiguous polysemous keyword
+Q50,matrix,held_out,ambiguous,Short ambiguous polysemous keyword
+Q51,database type:page,dev,filter,Filter search restricted to page document type
+Q52,climate lang:en,dev,filter,Filter search restricted to English language
+Q53,bahn lang:de,held_out,filter,Filter search restricted to German language
+Q54,bistrot lang:fr,held_out,filter,Filter search restricted to French language
+Q55,quantum warp drive antigravity teleportation,dev,no_answer,Unanswerable query with zero relevant documents
+Q56,superconducting unobtanium flux capacitor,held_out,no_answer,Unanswerable query with zero relevant documents
+Q57,perpetual motion free energy vortex generator,held_out,no_answer,Unanswerable query with zero relevant documents
+Q58,faster than light tachyonic subspace transceiver,dev,no_answer,Unanswerable query with zero relevant documents
