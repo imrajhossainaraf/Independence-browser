@@ -131,6 +131,7 @@ class Settings(BaseSettings):
     development_mode: bool = False
     real_network_enabled: bool = False
     allow_loopback_for_tests: bool = False
+    offline_mode: bool = False
 
     # Logging
     log_level: str = "INFO"
@@ -241,6 +242,8 @@ class Settings(BaseSettings):
             raise ValueError(
                 "real_network_enabled and allow_loopback_for_tests cannot both be true"
             )
+        if self.offline_mode and self.real_network_enabled:
+            raise ValueError("offline_mode and real_network_enabled cannot both be true")
         for name in _UNAVAILABLE_FLAGS:
             if getattr(self, name):
                 raise ValueError(f"{name} cannot be enabled: its step is not part of this release")

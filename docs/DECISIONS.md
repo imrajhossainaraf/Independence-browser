@@ -509,6 +509,41 @@ Verification:
 - WCAG 2.2 AA landmark, label, and WAI-ARIA combobox accessibility audit.
 - Full server asset delivery tests for `/`, `/news`, `/static/style.css`, and `/static/app.js`.
 
+## ADR-032: Online Backup, Verification, Safe Restore, and Offline Operation (Step 24 / Decision D11)
+
+Context:
+Implement Step 24 per BUILD_PLAN.md and BUILD_INSTRUCTIONS.md. Build complete database and file store protection using the SQLite online backup API (`Connection.backup`), content-addressed raw and image files, a versioned manifest with SHA-256 digests, safe restore into empty directories only, verification via `PRAGMA integrity_check` and `verify_index_consistency`, offline mode operation (`--offline`), and disaster recovery documentation in `docs/operations.md`.
+
+Key Architecture & Decisions:
+1. Online Backup Architecture (Decision D11):
+   - SQLite online backup API (`sqlite3.Connection.backup()`) is utilized to safely snapshot databases running in WAL mode even while concurrent readers and writers are actively executing transactions.
+   - Forbids live file copying of active SQLite database files per D11, eliminating partial-page read hazards.
+   - Atomic copy of content-addressed raw storage gzip files (`data/raw/`) and image WebP thumbnails (`data/images/`).
+   - Generates a versioned `manifest.json` containing SHA-256 digests, byte sizes, file paths, schema version, index version, engine version, and UTC timestamps.
+2. Safe Restore Pipeline:
+   - Target directory enforcement: Target directory must be newly created or strictly empty. Rejects non-empty targets immediately with `restore_target_not_empty` to prevent accidental data overwrites.
+   - Cryptographic verification: Validates `manifest.json` structure (`manifest_version: 1`), checks file presence, and recalculates SHA-256 digests for the database and every stored file. Any bit flip or missing file triggers immediate rejection with `backup_corrupted`.
+   - SQLite database integrity check: Restored database is verified with `PRAGMA integrity_check`. Must return `ok` or fails with `database_corrupt`.
+   - Inverted index consistency check: Executes `verify_index_consistency()` on restored database to verify that all active documents in `documents` have matching entries in `doc_fts` and `doc_fts_tri`.
+3. Offline Operation:
+   - Setting `offline_mode: bool = False` added to `Settings` with validation preventing simultaneous `offline_mode` and `real_network_enabled`.
+   - `--offline` flag added to `search-engine serve` CLI subcommand.
+   - Offline tests confirm search and home services operate flawlessly with all sockets blocked by `pytest-socket` (Invariant 10 & 16).
+4. Operator CLI:
+   - `search-engine backup [--output <dir>] [--db <path>] [--raw-dir <path>] [--image-dir <path>] [--json]`
+   - `search-engine restore --backup-dir <dir> --target-dir <dir> [--json]`
+5. Documentation & Operations:
+   - Updated `docs/operations.md` with Section 3 ("Backup, Restore & Disaster Recovery") and Section 4 ("Offline Operation"), detailing online backup mechanisms, CLI flags, verification gates, and step-by-step disaster recovery runbooks.
+
+Verification:
+- 12 comprehensive unit tests in `tests/unit/test_backup_restore.py`.
+- Tested full backup and restore cycle with sample store (documents, news items, raw files, images). Verified query outputs on restored DB match original 100%.
+- Tested online backup during concurrent WAL writer transaction.
+- Tested rejection of non-empty restore targets, missing or invalid manifests, tampered file hashes, and corrupt database bytes via `PRAGMA integrity_check`.
+- Tested CLI backup and restore commands in both `--json` and human-readable formats.
+- Tested offline mode operation with sockets blocked.
+
+
 
 
 

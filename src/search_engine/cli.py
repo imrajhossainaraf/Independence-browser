@@ -13,7 +13,7 @@ from typing import Any
 from search_engine import __version__
 from search_engine.config import describe, field_sources, load_settings
 from search_engine.db import Database
-from search_engine.errors import ConfigError, PolicyDenied
+from search_engine.errors import ConfigError, PolicyDenied, StorageError
 from search_engine.search import SearchService
 
 
@@ -162,6 +162,9 @@ def build_parser() -> argparse.ArgumentParser:
     serve_parser.add_argument(
         "--dev", action="store_true", help="run with interactive docs enabled"
     )
+    serve_parser.add_argument(
+        "--offline", action="store_true", help="run in strict offline mode with zero network access"
+    )
 
     auth_parser = subparsers.add_parser("auth", help="manage API keys for server access")
     auth_sub = auth_parser.add_subparsers(dest="auth_command", required=True)
@@ -177,6 +180,42 @@ def build_parser() -> argparse.ArgumentParser:
     revoke_key = auth_sub.add_parser("revoke-key", help="revoke an API key by id")
     revoke_key.add_argument("id", help="key id to revoke")
     revoke_key.add_argument("--db", type=Path, default=None, help="database path")
+
+    backup_parser = subparsers.add_parser(
+        "backup", help="create an online snapshot backup of database, raw files, and images"
+    )
+    backup_parser.add_argument(
+        "--output",
+        "-o",
+        type=Path,
+        default=None,
+        help="backup destination directory (default: backups/backup-<timestamp>)",
+    )
+    backup_parser.add_argument("--db", type=Path, default=None, help="database path")
+    backup_parser.add_argument("--raw-dir", type=Path, default=None, help="raw storage directory")
+    backup_parser.add_argument(
+        "--image-dir", type=Path, default=None, help="image storage directory"
+    )
+    backup_parser.add_argument("--json", action="store_true", help="output manifest as JSON")
+
+    restore_parser = subparsers.add_parser(
+        "restore", help="restore a verified backup into an empty target directory"
+    )
+    restore_parser.add_argument(
+        "--backup-dir",
+        "-b",
+        type=Path,
+        required=True,
+        help="path to backup directory containing manifest.json",
+    )
+    restore_parser.add_argument(
+        "--target-dir",
+        "-t",
+        type=Path,
+        required=True,
+        help="empty target directory to restore into",
+    )
+    restore_parser.add_argument("--json", action="store_true", help="output restore report as JSON")
 
     return parser
 
@@ -370,6 +409,8 @@ def _serve(args: argparse.Namespace) -> int:
         overrides["db_path"] = str(args.db)
     if args.dev:
         overrides["development_mode"] = "true"
+    if args.offline:
+        overrides["offline_mode"] = "true"
 
     settings = load_settings(args.config_file, overrides)
     db = Database(Path(settings.db_path)).open()
@@ -467,6 +508,85 @@ def _auth(args: argparse.Namespace) -> int:
     return 2
 
 
+def _backup(args: argparse.Namespace) -> int:
+    from datetime import UTC, datetime
+
+    from search_engine.operations.backup import create_backup
+
+    overrides = _parse_overrides(args.overrides)
+    if args.db:
+        overrides["db_path"] = str(args.db)
+    if args.raw_dir:
+        overrides["raw_dir"] = str(args.raw_dir)
+    if args.image_dir:
+        overrides["image_dir"] = str(args.image_dir)
+
+    settings = load_settings(args.config_file, overrides)
+    db_path = Path(settings.db_path)
+    raw_dir = Path(settings.raw_dir)
+    image_dir = Path(settings.image_dir)
+
+    if not db_path.exists():
+        print(f"Error: database file not found at '{db_path}'.", file=sys.stderr)
+        return 1
+
+    if args.output:
+        output_dir = Path(args.output)
+    else:
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+        output_dir = Path("backups") / f"backup_{timestamp}"
+
+    try:
+        manifest = create_backup(
+            db_path=db_path,
+            output_dir=output_dir,
+            raw_dir=raw_dir,
+            image_dir=image_dir,
+        )
+    except StorageError as exc:
+        print(f"Backup failed [{exc.code}]: {exc.message}", file=sys.stderr)
+        return 1
+
+    if args.json:
+        print(json.dumps(manifest.to_dict(), indent=2))
+    else:
+        print(f"Backup created successfully at: {output_dir}")
+        print(f"  Schema version: {manifest.schema_version}")
+        print(f"  Index version:  {manifest.index_version}")
+        print(f"  Total files:    {manifest.total_files}")
+        print(f"  Total bytes:    {manifest.total_bytes}")
+        print(f"  Manifest:       {output_dir / 'manifest.json'}")
+    return 0
+
+
+def _restore(args: argparse.Namespace) -> int:
+    from search_engine.operations.backup import restore_backup
+
+    backup_dir = Path(args.backup_dir)
+    target_dir = Path(args.target_dir)
+
+    if not backup_dir.exists() or not backup_dir.is_dir():
+        print(f"Error: backup directory '{backup_dir}' does not exist.", file=sys.stderr)
+        return 1
+
+    try:
+        result = restore_backup(backup_dir=backup_dir, target_dir=target_dir)
+    except StorageError as exc:
+        print(f"Restore failed [{exc.code}]: {exc.message}", file=sys.stderr)
+        return 1
+
+    if args.json:
+        print(json.dumps(result.to_dict(), indent=2))
+    else:
+        print(f"Restore completed successfully into: {result.target_dir}")
+        print(f"  Database path:  {result.database_path}")
+        print(f"  Files restored: {result.files_restored}")
+        print(f"  Bytes restored: {result.bytes_restored}")
+        print(f"  Integrity:      {'PASSED' if result.integrity_ok else 'FAILED'}")
+        print(f"  Consistency:    {'PASSED' if result.consistency.is_consistent else 'FAILED'}")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
@@ -491,12 +611,19 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _serve(args)
         if args.command == "auth":
             return _auth(args)
+        if args.command == "backup":
+            return _backup(args)
+        if args.command == "restore":
+            return _restore(args)
     except ConfigError as exc:
         print(f"error [{exc.code}]: {exc.message}", file=sys.stderr)
         return 3
     except PolicyDenied as exc:
         print(f"error [{exc.code}]: {exc.message}", file=sys.stderr)
         return 4
+    except StorageError as exc:
+        print(f"error [{exc.code}]: {exc.message}", file=sys.stderr)
+        return 1
     return 2  # pragma: no cover - argparse rejects unknown commands first
 
 

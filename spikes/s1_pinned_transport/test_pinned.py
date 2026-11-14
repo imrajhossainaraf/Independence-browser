@@ -21,7 +21,7 @@ def make_client(ca: trustme.CA, *, keepalive: bool = True, timeout: float = 5.0)
     context = ssl.create_default_context()
     ca.configure_trust(context)
     limits = httpx.Limits(max_keepalive_connections=None if keepalive else 0)
-    return httpx.Client(verify=context, limits=limits, timeout=timeout)
+    return httpx.Client(verify=context, limits=limits, timeout=timeout, trust_env=False)
 
 
 @pytest.fixture
