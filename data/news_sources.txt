@@ -1,0 +1,5 @@
+# Approved News Sources for Independent Search Engine
+# Format: feed_url, display_name, category, poll_interval_minutes, images_allowed (yes/no)
+# Note: poll_interval_minutes must be >= 15. Default is 30.
+# Example:
+# https://example.com/rss.xml, Example News, General, 30, no

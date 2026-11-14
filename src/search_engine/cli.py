@@ -142,6 +142,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="authorize real-mode crawling by hashing inputs into preflight.approved.json (D13)",
     )
 
+    news_parser = subparsers.add_parser("news", help="manage news ingestion and feeds")
+    news_sub = news_parser.add_subparsers(dest="news_command", required=True)
+    poll_parser = news_sub.add_parser("poll", help="poll news feeds")
+    poll_parser.add_argument("--sources", type=Path, default=None, help="path to news_sources.txt")
+    poll_parser.add_argument("--db", type=Path, default=None, help="database path")
+    poll_parser.add_argument(
+        "--force", action="store_true", help="force poll all enabled feeds regardless of interval"
+    )
+    poll_parser.add_argument(
+        "--mode", choices=["fixture", "real"], default="fixture", help="run mode"
+    )
+    poll_parser.add_argument("--json", action="store_true", help="machine-readable JSON output")
+
     return parser
 
 
@@ -294,6 +307,31 @@ def _crawl(args: argparse.Namespace) -> int:
     return 0
 
 
+def _news(args: argparse.Namespace) -> int:
+    if args.news_command == "poll":
+        from search_engine.crawler.news import NewsPoller
+
+        overrides = _parse_overrides(args.overrides)
+        if args.db:
+            overrides["db_path"] = str(args.db)
+        settings = load_settings(args.config_file, overrides)
+
+        poller = NewsPoller(settings, mode=args.mode)
+        report = poller.poll(sources_file=args.sources, force=args.force)
+
+        if args.json:
+            print(json.dumps(report.to_dict(), indent=2))
+        else:
+            print(report.render())
+
+        if report.status == "refused_lock_held":
+            return 1
+        if report.sources_failed > 0 and report.sources_success == 0 and report.sources_polled > 0:
+            return 1
+        return 0
+    return 2
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
@@ -312,6 +350,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _approve_preflight(args)
         if args.command == "crawl":
             return _crawl(args)
+        if args.command == "news":
+            return _news(args)
     except ConfigError as exc:
         print(f"error [{exc.code}]: {exc.message}", file=sys.stderr)
         return 3

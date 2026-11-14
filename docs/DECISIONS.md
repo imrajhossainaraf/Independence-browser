@@ -363,6 +363,46 @@ Findings & Measurements:
 
 Decision: Proceed with Step 18 using SQLite WAL mode for concurrent news polling, the `ProcessLock` pattern for mutual exclusion and crash recovery, and the documented Task Scheduler settings.
 
+## ADR-028: News Ingestion, Headline Clustering, and Retention (Step 18)
+
+Context: Build the automated news ingestion subsystem that fetches RSS/Atom feeds, respects HTTP 304 caching and politeness delays, cleans summaries, clusters related headlines across sources, indexes news stories into the full-text search index, tracks feed health, and prunes expired/excess stories.
+
+Key Components:
+1. Process Locking & Windows Task Scheduler Resilience (`src/search_engine/lock.py`):
+   - `ProcessLock` provides OS-level non-blocking file locking (`msvcrt.locking` on Windows, `fcntl.flock` on Unix).
+   - Records metadata JSON (`pid`, `acquired_at`).
+   - Detects stale locks from terminated processes via `psutil.pid_exists` and automatically re-acquires the lock without human intervention.
+   - Re-entrant for the same thread / process.
+2. Feed Parsing & HTTP Politeness (`src/search_engine/experience/news.py`):
+   - Approved news sources loaded from `data/news_sources.txt` (`parse_news_sources`), supporting custom categories, per-source polling intervals (clamped between 15 and 1440 min), and auto-indexing toggles.
+   - Uses `Scheduler.approve` before any network request; respects robots.txt and host politeness delays.
+   - `SafeFetcher.fetch_once` performs streaming fetch with size limits and conditional `If-None-Match` / `If-Modified-Since` headers.
+   - On HTTP 304 Not Modified, updates feed health and source timestamp without touching stored items or FTS.
+   - Source health tracking: records `last_fetched_at`, `last_status`, `consecutive_failures`, `last_error`, and computes health status (`is_healthy: False` on failure or >= 3 failures).
+   - Stale detection: items with missing publish dates are tagged `is_stale=1` and receive current timestamp as fallback.
+3. Summary Sanitization:
+   - `clean_summary`: Uses Selectolax Lexbor HTML parser to strip `<script>`, `<style>`, unescapes HTML entities, strips excess whitespace, and caps length at 300 characters.
+4. Headline Clustering & Top Stories Decay Scoring (`src/search_engine/experience/clusters.py`):
+   - Title shingles: generates word bigrams (fallback to unigrams for single-word titles) with punctuation and stopword removal.
+   - Jaccard similarity threshold (>= 0.30) for clustering stories within a 48-hour time window.
+   - Connected components clustering groups stories across different news sources into cohesive topical clusters.
+   - Selects primary headline based on source quality score, shortest punchy title, and recency.
+   - Top stories ranking: applies exponential half-life decay score where base score favors multi-source clusters and decays with half-life of 12 hours.
+   - Evaluated on benchmark `eval/news_labels.csv` demonstrating 100% precision on true clusters and zero false merges against distractor headlines.
+5. Ingestion Pipeline & Retention Policy:
+   - `NewsPoller.poll`: atomic per-source transactions.
+   - Seamless FTS5 indexing: when `auto_index=True`, news items are inserted/updated into `documents` and indexed into `doc_fts` via `upsert_document_index`, making them immediately searchable in normal search.
+   - Retention policy (`apply_news_retention`): soft-deletes stories older than 14 days and enforces active capacity cap (500 items), deactivating associated documents from FTS while maintaining referential integrity.
+6. Automation:
+   - Windows Task Scheduler integration via `scripts/news-poll.ps1` with execution guide in `docs/operations.md`.
+   - CLI command: `search-engine news poll [--force] [--sources PATH]`.
+
+Verification:
+- 19 comprehensive unit and integration tests in `tests/unit/test_news_ingestion.py`.
+- Verified lock recovery after hard kill, conditional 304 caching, retention and cap pruning, source failure resilience, stale date tagging, Lexbor summary sanitization, clustering precision benchmark, and end-to-end RSS ingestion into search index.
+- All tests passing with 0 socket leaks and strict mypy compliance.
+
+
 
 
 

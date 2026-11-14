@@ -1,5 +1,5 @@
 # Mirrors scripts/*.ps1 one-to-one (a test enforces it). PowerShell scripts are primary.
-.PHONY: install check test demo eval serve audit
+.PHONY: install check test demo eval serve audit news-poll
 
 install:
 	uv sync --frozen
@@ -23,3 +23,6 @@ serve:
 audit:
 	uv run --frozen bandit -q -r src -ll
 	uv run --frozen pip-licenses --format=markdown
+
+news-poll:
+	uv run --frozen search-engine news poll

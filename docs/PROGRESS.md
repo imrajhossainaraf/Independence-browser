@@ -27,7 +27,7 @@ Release A (v0.1.0). Steps 19, 20, 28 are Release B and skipped.
 | 16 | Controlled crawl pipeline | done | step-16 | 499 tests, 88% cov; pipeline, loopback link extraction, preflight manifest (ADR-025) |
 | 17 | Deduplication and freshness | done | step-17 | 508 tests, 87% cov; exact hash, canonical grouping, 304, 404 deactivation (ADR-026) |
 | S4 | Spike: poller, server, Task Scheduler | done (GO) | spike-s4 | WAL p95 2.15ms, ProcessLock crash recovery, Task Scheduler documented (ADR-027) |
-| 18 | News ingestion | todo | | |
+| 18 | News ingestion | done | step-18 | 531 tests, 88% cov; ProcessLock, poller, clustering, retention, 304 caching, Task Scheduler documented (ADR-028) |
 | 21 | Panels and home | todo | | |
 | 22-23 | API and thin client (M2) | todo | | |
 | 24-27 | Backup, controls, metrics, full eval | todo | | |

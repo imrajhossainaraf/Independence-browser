@@ -54,6 +54,7 @@ class HttpxTransport:
                 verify=self._verify,
                 limits=self._limits,
                 follow_redirects=False,
+                trust_env=False,
             )
         return self._client
 

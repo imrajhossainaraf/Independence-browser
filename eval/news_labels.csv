@@ -1,0 +1,14 @@
+item_id,source_id,title,published_at,cluster_label
+item-01,1,SpaceX Launches Starship On Third Orbital Test Flight,2026-11-14T08:00:00Z,spacex_starship
+item-02,2,SpaceX Launches Starship On Third Orbital Test Flight Successfully,2026-11-14T08:15:00Z,spacex_starship
+item-03,3,SpaceX Launches Starship On Third Orbital Test Flight From Texas,2026-11-14T08:30:00Z,spacex_starship
+item-04,1,Federal Reserve Holds Benchmark Interest Rates Steady,2026-11-14T09:00:00Z,fed_rates
+item-05,2,Federal Reserve Holds Benchmark Interest Rates Steady Today,2026-11-14T09:20:00Z,fed_rates
+item-06,4,Federal Reserve Holds Benchmark Interest Rates Steady This Week,2026-11-14T09:45:00Z,fed_rates
+item-07,2,James Webb Space Telescope Discovers Ancient Galaxy In Deep Space,2026-11-14T10:00:00Z,jwst_galaxy
+item-08,3,James Webb Space Telescope Discovers Ancient Galaxy In Early Universe,2026-11-14T10:30:00Z,jwst_galaxy
+item-09,1,Global Climate Summit Concludes With Renewable Energy Expansion Pact,2026-11-14T11:00:00Z,climate_pact
+item-10,4,Global Climate Summit Concludes With Renewable Energy Expansion Treaty,2026-11-14T11:45:00Z,climate_pact
+item-11,1,Local Bakery Celebrates 50th Anniversary With Free Pastries,2026-11-14T12:00:00Z,solo_bakery
+item-12,2,Regional Transit Authority Announces Weekend Rail Track Maintenance,2026-11-14T12:30:00Z,solo_transit
+item-13,3,New Electric Bicycle Regulations Take Effect Across State Cities,2026-11-14T13:00:00Z,solo_ebike
