@@ -98,3 +98,13 @@ def test_cli_demo_command(tmp_path: Path, capsys: pytest.CaptureFixture[str]) ->
     captured = capsys.readouterr()
     assert "OFFLINE VERTICAL SLICE DEMO" in captured.out
     assert "DEMO COMPLETED SUCCESSFULLY" in captured.out
+
+
+def test_cli_eval_command(capsys: pytest.CaptureFixture[str]) -> None:
+    code = main(["eval", "--split", "dev", "--check-baseline", "eval/baseline.json"])
+    assert code == 0
+    captured = capsys.readouterr()
+    assert "Search Evaluation Report [DEV SET]" in captured.out
+    assert "Regression Check" in captured.out
+    assert "PASSED" in captured.out
+

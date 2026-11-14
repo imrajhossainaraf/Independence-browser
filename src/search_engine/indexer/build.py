@@ -99,6 +99,8 @@ def rebuild_index(conn: sqlite3.Connection, *, run_id: str | None = None) -> Ind
     Transaction-safe: operates within the caller's transaction or commits atomically.
     """
     t0 = time.perf_counter()
+    if conn.row_factory is None:
+        conn.row_factory = sqlite3.Row
     report = IndexBuildReport(
         run_id=run_id or f"rebuild-{uuid.uuid4().hex[:8]}",
         started_at=_utc_now_iso(),

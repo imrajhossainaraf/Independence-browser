@@ -163,6 +163,30 @@ Decision:
   - 441 total project tests passed with 89% coverage and sockets blocked.
 Consequences: Evaluation harness (Step 12) can measure search quality (P@5, P@10, MRR, nDCG@10) against graded queries.
 
+## ADR-021: Search evaluation harness, designed corpus, and regression detection (Step 12)
+
+Context: Step 12 establishes a repeatable quality evaluation harness before any ranking adjustments (Step 13) are made, ensuring we measure search quality (Precision@5, Precision@10, MRR, nDCG@10, and latency) and detect ranking regressions without touching held-out queries.
+Decision:
+- Designed fixture corpus (`src/search_engine/evaluation/corpus.py`):
+  - 60 diverse documents covering databases, systems, ML/IR, clean energy, space, devops, and multilingual pages (French, German, Chinese, Japanese).
+  - Explicit document characteristics: title matches vs body-only mentions, near-duplicates, stale vs fresh dates, short vs long text, and multiple document types (`page`, `pdf`, `text`, `news`).
+- Evaluation datasets (`eval/`):
+  - `eval/queries.csv`: 24 graded queries categorized across `exact`, `informational`, `news`, and `multilingual`, strictly partitioned into 16 `dev` queries and 8 `held_out` queries.
+  - `eval/judgments.csv`: Graded relevance judgments on a 0-3 scale (78 judgments across queries).
+- Evaluation engine (`src/search_engine/evaluation/`):
+  - `evaluator.py`: Hand-verified metric implementations for `calculate_precision_at_k`, `calculate_mrr`, `calculate_dcg`, and `calculate_ndcg`. `evaluate_system` runs in-memory, enforces the dev vs held-out split, computes mean metrics, latency percentiles (p50, p95), zero-result rates, category breakdowns, and produces machine-readable JSON and Markdown reports.
+  - `regression.py`: `check_regression` comparing against a saved baseline with configurable tolerance (default 0.05), flagging metric drops as regressions and gains as improvements.
+  - `run_eval.py`: CLI evaluation runner with `--split`, `--queries`, `--judgments`, `--save-baseline`, `--check-baseline`, and `--tolerance`.
+- CLI & scripts integration:
+  - Added `search-engine eval` command in `src/search_engine/cli.py`.
+  - Created `scripts/eval.ps1` and mirrored `eval:` target in `Makefile`.
+  - Saved initial BM25 baseline to `eval/baseline.json` on the dev set (P@5 = 0.3125, P@10 = 0.2476, MRR = 1.0000, nDCG@10 = 0.9046, p50 latency = 0.25 ms).
+- Verification:
+  - 10 unit tests across `test_evaluation.py` and `test_cli_search.py`: hand-computed math verification for P@5, P@10, MRR, nDCG@10; deliberate ranking degradation detection; dev vs held-out split enforcement; corpus and judgment dataset integrity; 100% offline socket blocking; CLI invocation.
+  - 451 total project tests passing with 88% overall test coverage.
+Consequences: Step 13 can now implement ranking enhancements (freshness, source quality, title boost, phrase boost) and measure impact against the dev baseline while keeping held-out queries strictly untouched.
+
+
 
 
 

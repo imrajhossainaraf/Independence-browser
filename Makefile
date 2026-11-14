@@ -1,5 +1,5 @@
 # Mirrors scripts/*.ps1 one-to-one (a test enforces it). PowerShell scripts are primary.
-.PHONY: install check test demo serve audit
+.PHONY: install check test demo eval serve audit
 
 install:
 	uv sync --frozen
@@ -12,6 +12,9 @@ test:
 
 demo:
 	uv run --frozen search-engine demo
+
+eval:
+	uv run --frozen search-engine eval --split dev --check-baseline eval/baseline.json
 
 serve:
 	@echo "serve: the API server is introduced in Step 22 and is not available yet."

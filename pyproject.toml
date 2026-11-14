@@ -58,6 +58,7 @@ select = ["E", "F", "I", "B", "UP", "S", "PT"]
 "tests/**" = ["S101", "S104", "PT018", "S603"]
 "spikes/**" = ["S101", "S104", "PT018", "E501", "S603"]
 "scripts/run_check.py" = ["S603"]
+"src/search_engine/evaluation/corpus.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.12"

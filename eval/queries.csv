@@ -1,0 +1,25 @@
+query_id,query,split,category,notes
+Q01,sqlite fts5 full text search,dev,exact,SQLite FTS5 virtual table documentation
+Q02,python async programming,dev,informational,Python asyncio and event loop programming
+Q03,rust ownership memory safety,dev,informational,Rust borrow checker and memory safety
+Q04,duckdb columnar vectorized execution,dev,exact,DuckDB embedded OLAP database architecture
+Q05,rocksdb lsm trees storage,held_out,exact,RocksDB write-optimized storage engine
+Q06,raft consensus algorithm,held_out,informational,Distributed Raft consensus protocol
+Q07,deep learning neural networks backpropagation,dev,informational,Neural network foundations and backprop
+Q08,transformer self attention mechanisms,dev,informational,Transformer attention sequence architecture
+Q09,quantum computing cryptographic security,dev,informational,Post-quantum cryptographic security standards
+Q10,james webb space telescope discoveries,dev,informational,James Webb telescope infrared astronomy
+Q11,commercial spaceflight reusable rocket booster,held_out,informational,Reusable rocketry economics and launch costs
+Q12,mars rover geological exploration lakebed,held_out,informational,Sedimentary exploration on Mars in Jezero
+Q13,global climate summit renewable energy,dev,news,COP conference renewable energy agreement
+Q14,electric vehicles solid state battery range,dev,informational,Solid state lithium battery driving range
+Q15,perovskite solar cells efficiency,dev,informational,Tandem perovskite photovoltaic efficiency
+Q16,green hydrogen electrolysis decarbonization,held_out,informational,Hydrogen electrolysis for industrial emissions
+Q17,docker containerization microservices architecture,dev,informational,Container microservice application design
+Q18,kubernetes service mesh istio,dev,exact,Istio service mesh networking on Kubernetes
+Q19,open source software licensing mit gplv3,dev,informational,Open source license compliance and copyleft
+Q20,web application security xss csrf sql injection,held_out,informational,OWASP web defense and parameterized SQL
+Q21,french cuisine cafe bistrot restaurant,dev,multilingual,French culinary guide with accents
+Q22,berlin munchen deutsche bahn,dev,multilingual,German rail travel with umlauts
+Q23,北京气候峰会 可再生能源,held_out,multilingual,Chinese unspaced climate summit query
+Q24,東京 観光ガイド 浅草 渋谷,held_out,multilingual,Japanese travel guide for Tokyo

@@ -62,6 +62,43 @@ def build_parser() -> argparse.ArgumentParser:
     demo_parser.add_argument(
         "--db", type=Path, default=None, help="database path (default: data/demo.db)"
     )
+
+    eval_parser = subparsers.add_parser("eval", help="run evaluation harness offline")
+    eval_parser.add_argument(
+        "--split",
+        choices=["dev", "held_out", "all"],
+        default="dev",
+        help="Query split to evaluate (default: dev).",
+    )
+    eval_parser.add_argument(
+        "--save-baseline",
+        type=Path,
+        default=None,
+        help="Path to save evaluation output as baseline JSON.",
+    )
+    eval_parser.add_argument(
+        "--check-baseline",
+        type=Path,
+        default=None,
+        help="Path to baseline JSON file for regression detection.",
+    )
+    eval_parser.add_argument(
+        "--tolerance",
+        type=float,
+        default=0.05,
+        help="Allowed metric regression threshold (default: 0.05).",
+    )
+    eval_parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output raw JSON report instead of Markdown.",
+    )
+    eval_parser.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="Optional file path to write the output report.",
+    )
     return parser
 
 
@@ -141,6 +178,15 @@ def _demo(args: argparse.Namespace) -> int:
     return run_demo(args.db)
 
 
+def _eval(args: argparse.Namespace) -> int:
+    from search_engine.evaluation.evaluator import EVAL_DIR
+    from search_engine.evaluation.run_eval import run_evaluation
+
+    args.queries = EVAL_DIR / "queries.csv"
+    args.judgments = EVAL_DIR / "judgments.csv"
+    return run_evaluation(args)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
@@ -153,6 +199,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _search(args)
         if args.command == "demo":
             return _demo(args)
+        if args.command == "eval":
+            return _eval(args)
     except ConfigError as exc:
         print(f"error [{exc.code}]: {exc.message}", file=sys.stderr)
         return 3
