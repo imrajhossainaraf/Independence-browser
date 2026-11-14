@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Independent, self-hosted search engine with zero hallucination and complete data privacy.">
+  <title>Independent Search</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="app-header" role="banner">
+    <div class="header-container">
+      <div class="brand">
+        <a href="/" id="brand-link" class="brand-title" aria-label="Independent Search Home">
+          <span class="brand-icon" aria-hidden="true">🔍</span>
+          <span class="brand-text">Independent Search</span>
+        </a>
+        <span id="freshness-indicator" class="freshness-pill" title="Index freshness" hidden></span>
+      </div>
+
+      <form id="search-form" class="search-form" role="search" action="/" method="GET">
+        <div class="search-box-wrapper">
+          <label for="search-input" class="visually-hidden">Search query</label>
+          <input
+            type="search"
+            id="search-input"
+            name="q"
+            class="search-input"
+            placeholder="Search verified documents and news..."
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="256"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded="false"
+            aria-controls="suggestions-list"
+          >
+          <button type="submit" id="search-submit" class="search-btn" aria-label="Execute search">
+            <span aria-hidden="true">Search</span>
+          </button>
+        </div>
+        <ul id="suggestions-list" class="suggestions-dropdown" role="listbox" aria-label="Search suggestions" hidden></ul>
+      </form>
+
+      <div class="header-actions">
+        <button type="button" id="settings-btn" class="icon-btn" aria-label="API and Server Settings">
+          <span aria-hidden="true">⚙️</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Notification banners -->
+  <div id="stale-banner" class="banner banner-warning" role="alert" hidden>
+    <div class="banner-content">
+      <span class="banner-icon" aria-hidden="true">⚠️</span>
+      <span id="stale-message" class="banner-text">Data is older than configured threshold. News sources may be experiencing delays.</span>
+    </div>
+  </div>
+
+  <div id="error-banner" class="banner banner-danger" role="alert" hidden>
+    <div class="banner-content">
+      <span class="banner-icon" aria-hidden="true">❌</span>
+      <span id="error-message" class="banner-text"></span>
+      <button type="button" id="error-dismiss" class="banner-close" aria-label="Dismiss error">&times;</button>
+    </div>
+  </div>
+
+  <main id="main-content" class="main-container" role="main">
+    <!-- Loading spinner -->
+    <div id="loading-indicator" class="loading-state" aria-live="polite" hidden>
+      <div class="spinner" aria-hidden="true"></div>
+      <p class="loading-text">Loading...</p>
+    </div>
+
+    <!-- 1. HOME VIEW -->
+    <div id="home-view" class="view-panel">
+      <!-- Top Stories Section -->
+      <section class="home-section top-stories-section" aria-labelledby="top-stories-heading">
+        <div class="section-header">
+          <h2 id="top-stories-heading" class="section-title">Top Stories</h2>
+          <span id="top-stories-meta" class="section-subtitle"></span>
+        </div>
+        <div id="top-stories-grid" class="stories-grid"></div>
+      </section>
+
+      <!-- Category Filter Pills -->
+      <nav id="category-nav" class="category-nav" aria-label="News categories" hidden>
+        <span class="nav-label">Categories:</span>
+        <div id="category-pills" class="pills-container"></div>
+      </nav>
+
+      <!-- Latest News Section -->
+      <section class="home-section latest-news-section" aria-labelledby="latest-news-heading">
+        <div class="section-header">
+          <h2 id="latest-news-heading" class="section-title">Latest Headlines</h2>
+          <a href="/news" id="view-all-news-link" class="section-link">View archive &rarr;</a>
+        </div>
+        <div id="latest-news-list" class="news-list"></div>
+      </section>
+
+      <!-- Sources Health Section -->
+      <section class="home-section health-section" aria-labelledby="sources-health-heading">
+        <div class="section-header">
+          <h2 id="sources-health-heading" class="section-title">Source Health</h2>
+        </div>
+        <div id="sources-health-list" class="health-badges"></div>
+      </section>
+    </div>
+
+    <!-- 2. SEARCH RESULTS VIEW -->
+    <div id="results-view" class="view-panel" hidden>
+      <!-- Did you mean / auto-corrected -->
+      <div id="did-you-mean-container" class="did-you-mean" hidden>
+        <span>Did you mean: </span>
+        <button type="button" id="did-you-mean-btn" class="link-btn"></button>
+      </div>
+
+      <!-- Result metadata and filters -->
+      <div class="results-controls">
+        <div id="results-meta" class="results-meta" aria-live="polite"></div>
+        <nav class="type-filter-nav" aria-label="Filter results by document type">
+          <button type="button" class="filter-tab active" data-type="">All</button>
+          <button type="button" class="filter-tab" data-type="page">Web Pages</button>
+          <button type="button" class="filter-tab" data-type="pdf">PDF Documents</button>
+          <button type="button" class="filter-tab" data-type="news">News</button>
+        </nav>
+      </div>
+
+      <div class="results-layout">
+        <!-- Main results column -->
+        <div class="results-primary">
+          <!-- Grounded Extractive Synopsis Answer Card -->
+          <article id="synopsis-box" class="card card-synopsis" aria-labelledby="synopsis-title" hidden>
+            <div class="synopsis-badge">
+              <span class="badge-icon" aria-hidden="true">✓</span>
+              <span>Excerpt (100% Grounded in Document)</span>
+            </div>
+            <p id="synopsis-text" class="synopsis-body"></p>
+            <div class="synopsis-source">
+              <span>Source: </span>
+              <a id="synopsis-link" href="#" target="_blank" rel="noopener noreferrer"></a>
+              <span id="synopsis-confidence" class="confidence-tag"></span>
+            </div>
+          </article>
+
+          <!-- Organic Search Results List -->
+          <ol id="search-results-list" class="results-list" aria-label="Search results"></ol>
+
+          <!-- Empty search results state -->
+          <div id="empty-results" class="empty-state" hidden>
+            <div class="empty-icon" aria-hidden="true">🔎</div>
+            <h3>No matching documents found</h3>
+            <p>Try different keywords, removing filters, or checking your spelling.</p>
+          </div>
+
+          <!-- Recent News In Search Box (within 7 days) -->
+          <aside id="search-recent-news" class="card card-recent-news" aria-labelledby="recent-news-heading" hidden>
+            <h3 id="recent-news-heading" class="recent-news-title">Recent Related News</h3>
+            <div id="recent-news-items" class="recent-news-items"></div>
+          </aside>
+
+          <!-- Pagination -->
+          <nav id="pagination-nav" class="pagination-nav" aria-label="Search pagination" hidden>
+            <button type="button" id="prev-page-btn" class="page-btn">&larr; Previous</button>
+            <span id="page-indicator" class="page-indicator" aria-current="page">Page 1</span>
+            <button type="button" id="next-page-btn" class="page-btn">Next &rarr;</button>
+          </nav>
+        </div>
+
+        <!-- Sidebar column: PreviewCard or EntityCard -->
+        <aside id="sidebar-container" class="results-sidebar" aria-label="Knowledge and Preview Panel" hidden>
+          <div id="preview-card" class="card card-preview">
+            <h3 id="preview-title" class="preview-title"></h3>
+            <div id="preview-domain" class="preview-domain"></div>
+            <p id="preview-lead" class="preview-lead"></p>
+            <div class="preview-footer">
+              <a id="preview-url" class="preview-link" href="#" target="_blank" rel="noopener noreferrer">Visit Source &rarr;</a>
+              <span id="preview-source" class="preview-source-name"></span>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <!-- Settings modal -->
+  <div id="settings-dialog" class="modal-backdrop" hidden role="dialog" aria-modal="true" aria-labelledby="settings-heading">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 id="settings-heading" class="modal-title">Connection Settings</h2>
+        <button type="button" id="settings-close" class="modal-close" aria-label="Close dialog">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="api-key-input">API Bearer Key (if authentication is required):</label>
+          <input type="password" id="api-key-input" class="form-control" placeholder="se_..." autocomplete="off">
+          <small class="form-help">Stored only in temporary browser session memory. Never sent to third parties.</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="settings-save" class="btn btn-primary">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="app-footer" role="contentinfo">
+    <div class="footer-container">
+      <p class="footer-copy">Independent Search Engine &bull; Server-first, read-only, 100% verified data.</p>
+    </div>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -463,6 +463,53 @@ Verification:
 - 14 comprehensive unit and contract tests in `tests/unit/test_api_server.py`.
 - Verified OpenAPI contract equality, security headers, Host header rejection, CORS exact origin, API key validation and revocation, non-loopback startup refusal, rate limiter 429, home ETag 304 caching, search validation and logging redaction, feature flag 404 isolation, path leakage prevention, and Section 7A graceful degradation (empty news, missing index, locked db).
 
+## ADR-031: Thin Web Client and Milestone M2 (Step 23)
+
+Context:
+Implement Step 23 ("Thin Web Client - Milestone M2") per BUILD_PLAN.md and BUILD_INSTRUCTIONS.md. Deliver a lightweight, accessible, zero-dependency browser client in `src/search_engine/api/static/` that talks exclusively to the read-only `/api/v1` server endpoints, enabling users to explore news, search, read grounded synopsis excerpts, inspect previews, and navigate topics without any third-party scripts, tracking, or client-side search logic.
+
+Key Architecture & Decisions:
+1. Pure Vanilla Web Technology & Zero Third-Party Dependencies:
+   - Hand-crafted HTML5 (`index.html`), CSS3 (`style.css`), and JavaScript (`app.js`).
+   - Zero framework overhead, zero remote CDN scripts, zero third-party fonts or analytics.
+   - Total uncompressed JavaScript is 23.6 KB, well below the 50 KB ceiling.
+2. Strict XSS Safety (Invariant 12):
+   - Every piece of dynamic text from user queries or server responses is set strictly via `textContent` or `document.createTextNode()`.
+   - Never uses `innerHTML` or `outerHTML` for data injection.
+   - Safe snippet highlighting: parsed snippet token arrays are rendered by creating `<mark class="highlight">` elements with `mark.textContent = span.text` for matched terms and plain text nodes for non-matches.
+3. Dual-View Responsive Architecture:
+   - Home View:
+     - Top stories clustered grid with primary headline, contributing sources count, time, and clean summary.
+     - Interactive category filter pills.
+     - Latest headlines chronological listing.
+     - Source health indicators and data freshness timestamp pill.
+     - Prominent stale warning banner if data exceeds configured staleness threshold.
+   - Search Results View:
+     - Did-You-Mean query suggestions.
+     - Results metadata (count, match mode: AND / OR / TRIGRAM).
+     - Document type filter tabs (All, Web Pages, PDF Documents, News).
+     - Grounded Synopsis card labeled "Excerpt (100% Grounded in Document)" with source citation and confidence metric.
+     - Organic results with title, registered domain, published date, and highlighted snippets.
+     - Recent news block for matches within the 7-day window.
+     - Sidebar PreviewCard with clean lead, domain, and source link. Responsive layout shifts the sidebar below results on viewports under 768px.
+     - Pagination navigation with disabled bounds.
+4. WAI-ARIA 1.2 Combobox Autocomplete:
+   - Search input configured with `role="combobox"`, `aria-autocomplete="list"`, `aria-expanded`, and `aria-controls="suggestions-list"`.
+   - Dropdown listbox with `role="listbox"`, `role="option"`, and `aria-selected`.
+   - Full keyboard navigation: ArrowDown / ArrowUp cycling with `aria-activedescendant`, Enter to execute search, Escape to dismiss.
+5. Accessibility & Theming (WCAG 2.2 AA Target):
+   - Automatic Dark/Light mode adaptation via CSS variables and `@media (prefers-color-scheme: dark)` meeting contrast ratios >= 4.5:1.
+   - Visible focus indicators (`:focus-visible`) on all interactive controls.
+   - Respect for `@media (prefers-reduced-motion: reduce)`.
+   - Semantic HTML5 landmarks (`banner`, `main`, `contentinfo`, `search`, `navigation`).
+
+Verification:
+- 6 unit and static analysis tests in `tests/unit/test_client_web.py`.
+- Static AST and string audit verifying zero innerHTML/outerHTML, zero remote URLs, and JS budget < 50 KB.
+- WCAG 2.2 AA landmark, label, and WAI-ARIA combobox accessibility audit.
+- Full server asset delivery tests for `/`, `/news`, `/static/style.css`, and `/static/app.js`.
+
+
 
 
 

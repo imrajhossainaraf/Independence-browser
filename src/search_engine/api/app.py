@@ -11,7 +11,8 @@ from fastapi import APIRouter, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
-from starlette.responses import JSONResponse, Response
+from starlette.responses import FileResponse, JSONResponse, Response
+from starlette.staticfiles import StaticFiles
 
 from search_engine.api.middleware import (
     CorsMiddleware,
@@ -47,6 +48,10 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         if request.method == "OPTIONS":
+            return await call_next(request)
+
+        # Static client UI assets pass through so user can input API key in modal
+        if not request.url.path.startswith("/api/"):
             return await call_next(request)
 
         auth_header = request.headers.get("authorization")
@@ -219,6 +224,19 @@ def create_app(db: Database, settings: Settings | None = None) -> FastAPI:
     api_v1.include_router(images_router)
     api_v1.include_router(documents_router)
     app.include_router(api_v1)
+
+    # Mount static thin web client assets (Step 23, Milestone M2)
+    static_dir = Path(__file__).resolve().parent / "static"
+    if static_dir.is_dir():
+        app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
+        @app.get("/", include_in_schema=False)
+        def index() -> FileResponse:
+            return FileResponse(static_dir / "index.html")
+
+        @app.get("/news", include_in_schema=False)
+        def news_page() -> FileResponse:
+            return FileResponse(static_dir / "index.html")
 
     # Attach middlewares in reverse execution order (last added = outermost)
     app.add_middleware(AuthenticationMiddleware, db=db, settings=eff_settings)
